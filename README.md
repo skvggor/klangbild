@@ -1,4 +1,7 @@
-# klangbild
+<p align="center">
+  <img src="assets/icon.svg" alt="klangbild icon" width="120" height="120"/><br/>
+ <h1 align="center">klangbild</h1>
+</p>
 
 Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (JPG) from any MP3 file.
 
