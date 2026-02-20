@@ -69,8 +69,8 @@ FPS = 30
 
 # Waveform: small and centered (~300x50 visual equivalent scaled to 4K)
 # At 4K: 300px wide in 1080p = 1200px; 50px tall (half) in 1080p = 100px
-WAVE_WIDTH = 1200  # horizontal span in pixels
-WAVE_HEIGHT = 100  # max amplitude in pixels (half-side, mirrored)
+WAVE_WIDTH = 1800  # horizontal span in pixels
+WAVE_HEIGHT = 150  # max amplitude in pixels (half-side, mirrored)
 WAVE_CENTER_Y = HEIGHT // 2
 WAVE_X_START = (WIDTH - WAVE_WIDTH) // 2
 
@@ -84,14 +84,12 @@ SEEK_BAR_W = WAVE_WIDTH
 TEXT_X = SEEK_BAR_X
 # Time label sits above seek bar with comfortable breathing room
 TIME_MARGIN = 20  # gap between time text bottom and seek bar top
-TEXT_Y_TIME = SEEK_BAR_Y - 32 - TIME_MARGIN  # 32 ≈ font height at 32px
+TEXT_Y_TIME = SEEK_BAR_Y - 40 - TIME_MARGIN  # 40 ≈ font height at 40px
 # Track info stacks upward from the time label
-TEXT_Y_ALBUM = TEXT_Y_TIME - 52
-TEXT_Y_ARTIST = TEXT_Y_ALBUM - 52
-TEXT_Y_TITLE = TEXT_Y_ARTIST - 76
+TEXT_Y_ALBUM = TEXT_Y_TIME - 65
+TEXT_Y_ARTIST = TEXT_Y_ALBUM - 65
+TEXT_Y_TITLE = TEXT_Y_ARTIST - 95
 
-# Background processing
-BG_DARKEN_ALPHA = 140  # 0 = transparent, 255 = fully black (no blur)
 
 # Waveform smoothing
 SMOOTHING_WINDOW = 15  # spatial: moving-average window along the X axis of each frame
@@ -104,6 +102,7 @@ TEMPORAL_ALPHA = 0.35  # temporal EMA between consecutive frames
 # Waveform edge fade — number of pixels over which the wave fades to transparent
 # on each side, creating the illusion of an infinite waveform.
 WAVE_FADE_WIDTH = 180  # ~15% of WAVE_WIDTH (1200px)
+
 
 # Localisation — prefixes for artist and album fields
 LANG_PREFIXES: dict[str, dict[str, str]] = {
@@ -385,11 +384,6 @@ def prepare_background(image_path: str) -> Image.Image:
     top = (new_h - HEIGHT) // 2
     bg = bg.crop((left, top, left + WIDTH, top + HEIGHT))
 
-    # Darken overlay
-    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, BG_DARKEN_ALPHA))
-    bg = bg.convert("RGBA")
-    bg = Image.alpha_composite(bg, overlay).convert("RGB")
-
     return bg
 
 
@@ -645,10 +639,10 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
     samples = np.frombuffer(samples_bytes, dtype=np.float32).copy()
     bg = Image.frombytes("RGB", bg_size, bg_bytes)
 
-    font_title = load_font_bold(64, font_bold_path)
-    font_artist = load_font_regular(48, font_path)
-    font_album = load_font_regular(40, font_path)
-    font_time = load_font_regular(32, font_path)
+    font_title = load_font_bold(80, font_bold_path)
+    font_artist = load_font_regular(60, font_path)
+    font_album = load_font_regular(50, font_path)
+    font_time = load_font_regular(40, font_path)
 
     img = render_frame(
         bg=bg,

@@ -2,9 +2,9 @@
 
 Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (JPG) from any MP3 file.
 
-- Centered, mirrored waveform that reacts to the audio
-- Background image with darkening overlay
-- Song title, artist, album, and a seek bar in the lower-left corner
+- Centered, mirrored waveform (1800 × 300 px) that reacts to the audio
+- Background image rendered as-is, without any darkening overlay
+- Song title, artist, album, and a seek bar aligned to the left edge of the waveform
 - Staggered fade-in / fade-out (background → wave → UI)
 - Infinite-wave edge fade effect
 - GPU encoding via NVENC or VAAPI (optional)
@@ -17,7 +17,7 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 | Video (frame) | Cover image |
 |:-------------:|:-----------:|
-| ![Video frame](assets/video.png) | ![Cover](assets/cover.jpg) |
+| ![Video frame](assets/video.jpg) | ![Cover](assets/cover.jpg) |
 
 ---
 
@@ -97,7 +97,26 @@ Each MP3 produces a `.mp4` and `.jpg` in the same folder.
 
 ---
 
+## Visual layout
+
+The output frame is 3840×2160 px. Key measurements:
+
+| Element | Value |
+|---------|-------|
+| Waveform width | 1800 px (centered) |
+| Waveform amplitude | ±150 px (300 px total height) |
+| Font — title | 80 px bold |
+| Font — artist | 60 px regular |
+| Font — album | 50 px regular |
+| Font — time | 40 px regular |
+| Seek bar distance from bottom | 120 px |
+
+A reference layout image (`assets/bg_spec.png`) is included in the repository and can be used as a template when preparing background images.
+
+---
+
 ## Output
 
 - `<output>.mp4` — 3840×2160 (4K), 30 fps, H.264, AAC 320 kbps
 - `<output>.jpg` — 4K cover image with centered text
+
