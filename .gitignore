@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+.venv/
+
+# uv
+.ruff_cache/
+
+# Build / dist
+dist/
+build/
+*.egg-info/
+
+# Output files (generated videos and covers)
+*.mp4
+*.jpg
+*.jpeg
+*.png
+
+# OS
+.DS_Store
+Thumbs.db
