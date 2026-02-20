@@ -4,7 +4,7 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 - Centered, mirrored waveform (1800 × 300 px) that reacts to the audio
 - Background image rendered as-is, without any darkening overlay
-- Song title, artist, album, and a seek bar in the lower-left corner
+- Song title, artist, album, and a seek bar aligned to the left edge of the waveform
 - Staggered fade-in / fade-out (background → wave → UI)
 - Infinite-wave edge fade effect
 - GPU encoding via NVENC or VAAPI (optional)
@@ -104,7 +104,7 @@ The output frame is 3840×2160 px. Key measurements:
 | Element | Value |
 |---------|-------|
 | Waveform width | 1800 px (centered) |
-| Waveform amplitude | ±150 px |
+| Waveform amplitude | ±150 px (300 px total height) |
 | Font — title | 80 px bold |
 | Font — artist | 60 px regular |
 | Font — album | 50 px regular |
