@@ -111,7 +111,7 @@ The output frame is 3840×2160 px. Key measurements:
 | Font — time | 40 px regular |
 | Seek bar distance from bottom | 120 px |
 
-A reference layout image (`bg_spec.png`) is generated in the project root and can be used as a template when preparing background images.
+A reference layout image (`assets/bg_spec.png`) is included in the repository and can be used as a template when preparing background images.
 
 ---
 
