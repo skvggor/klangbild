@@ -111,6 +111,30 @@ VIGNETTE_DECAY = (
 # on each side, creating the illusion of an infinite waveform.
 WAVE_FADE_WIDTH = 180  # ~15% of WAVE_WIDTH (1200px)
 
+
+# Pre-computed vignette mask (float32, range 0–1): darkest at corners, zero at
+# centre. Computed once at import time so render_vignette() only scales alpha.
+def _build_vignette_mask() -> np.ndarray:
+    cx, cy = WIDTH / 2.0, HEIGHT / 2.0
+    xs = (np.arange(WIDTH, dtype=np.float32) - cx) / cx
+    ys = (np.arange(HEIGHT, dtype=np.float32) - cy) / cy
+    xx, yy = np.meshgrid(xs, ys)
+    dist = np.sqrt(xx**2 + yy**2)
+    return np.clip(dist**1.6, 0.0, 1.0)  # shape (HEIGHT, WIDTH)
+
+
+# Built lazily per-process so it is never pickled across multiprocessing forks.
+_VIGNETTE_MASK: np.ndarray | None = None
+
+
+def _get_vignette_mask() -> np.ndarray:
+    """Return the cached mask, building it on first call within this process."""
+    global _VIGNETTE_MASK
+    if _VIGNETTE_MASK is None:
+        _VIGNETTE_MASK = _build_vignette_mask()
+    return _VIGNETTE_MASK
+
+
 # Localisation — prefixes for artist and album fields
 LANG_PREFIXES: dict[str, dict[str, str]] = {
     "en": {"artist": "by ", "album": "from "},
@@ -419,30 +443,17 @@ def render_vignette(intensity: float) -> Image.Image:
     Build a radial vignette layer (RGBA) whose edge darkness scales with
     *intensity* (0.0 = invisible, 1.0 = VIGNETTE_MAX_ALPHA at the corners).
 
-    The mask is computed once via numpy: a smooth elliptical gradient that is
-    darkest at the four corners and fully transparent at the centre.
+    The mask is computed lazily on first call within each worker process
+    so it is never pickled across multiprocessing boundaries.
     """
     if intensity <= 0.0:
         return Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
 
-    # Normalised distance from centre — ranges 0 (centre) → ~1.41 (corner)
-    cx, cy = WIDTH / 2.0, HEIGHT / 2.0
-    xs = (np.arange(WIDTH, dtype=np.float32) - cx) / cx  # -1 … +1
-    ys = (np.arange(HEIGHT, dtype=np.float32) - cy) / cy  # -1 … +1
-    xx, yy = np.meshgrid(xs, ys)
-    dist = np.sqrt(xx**2 + yy**2)  # 0 … ~1.414
-
-    # Smooth vignette shape: raise dist to a power and clamp to [0, 1]
-    # power=1.6 gives a gentle falloff; increase for a tighter edge.
-    vig = np.clip(dist**1.6, 0.0, 1.0)
-
+    mask = _get_vignette_mask()
     alpha_max = int(VIGNETTE_MAX_ALPHA * intensity)
-    alpha_channel = (vig * alpha_max).astype(np.uint8)
-
+    alpha_channel = (mask * alpha_max).astype(np.uint8)
     rgba = np.zeros((HEIGHT, WIDTH, 4), dtype=np.uint8)
-    # RGB stays black (0); only alpha varies
     rgba[:, :, 3] = alpha_channel
-
     return Image.fromarray(rgba, "RGBA")
 
 
