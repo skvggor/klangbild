@@ -69,8 +69,8 @@ FPS = 30
 
 # Waveform: small and centered (~300x50 visual equivalent scaled to 4K)
 # At 4K: 300px wide in 1080p = 1200px; 50px tall (half) in 1080p = 100px
-WAVE_WIDTH = 1200  # horizontal span in pixels
-WAVE_HEIGHT = 100  # max amplitude in pixels (half-side, mirrored)
+WAVE_WIDTH = 1800  # horizontal span in pixels
+WAVE_HEIGHT = 150  # max amplitude in pixels (half-side, mirrored)
 WAVE_CENTER_Y = HEIGHT // 2
 WAVE_X_START = (WIDTH - WAVE_WIDTH) // 2
 
@@ -84,14 +84,12 @@ SEEK_BAR_W = WAVE_WIDTH
 TEXT_X = SEEK_BAR_X
 # Time label sits above seek bar with comfortable breathing room
 TIME_MARGIN = 20  # gap between time text bottom and seek bar top
-TEXT_Y_TIME = SEEK_BAR_Y - 32 - TIME_MARGIN  # 32 ≈ font height at 32px
+TEXT_Y_TIME = SEEK_BAR_Y - 40 - TIME_MARGIN  # 40 ≈ font height at 40px
 # Track info stacks upward from the time label
-TEXT_Y_ALBUM = TEXT_Y_TIME - 52
-TEXT_Y_ARTIST = TEXT_Y_ALBUM - 52
-TEXT_Y_TITLE = TEXT_Y_ARTIST - 76
+TEXT_Y_ALBUM = TEXT_Y_TIME - 65
+TEXT_Y_ARTIST = TEXT_Y_ALBUM - 65
+TEXT_Y_TITLE = TEXT_Y_ARTIST - 95
 
-# Background processing
-BG_DARKEN_ALPHA = 140  # 0 = transparent, 255 = fully black (no blur)
 
 # Waveform smoothing
 SMOOTHING_WINDOW = 15  # spatial: moving-average window along the X axis of each frame
@@ -100,6 +98,14 @@ SMOOTHING_WINDOW = 15  # spatial: moving-average window along the X axis of each
 TEMPORAL_ALPHA = 0.35  # temporal EMA between consecutive frames
 #   0.0 = frozen (never updates), 1.0 = no temporal smoothing
 #   0.3–0.5 gives fluid motion; lower = more lag, higher = more jitter
+
+# Vignette effect — reacts to loud peaks and fades out smoothly
+VIGNETTE_RMS_THRESHOLD = 0.25  # RMS level (0–1) above which vignette starts appearing
+VIGNETTE_MAX_ALPHA = 180  # max darkness of the vignette edges (0–255)
+VIGNETTE_ATTACK = 0.85  # EMA factor for rising energy  (closer to 1 = faster attack)
+VIGNETTE_DECAY = (
+    0.12  # EMA factor for falling energy (closer to 0 = slower decay / longer tail)
+)
 
 # Waveform edge fade — number of pixels over which the wave fades to transparent
 # on each side, creating the illusion of an infinite waveform.
@@ -291,12 +297,13 @@ def analyze_audio(
     fps: int,
     smoothing_window: int = SMOOTHING_WINDOW,
     temporal_alpha: float = TEMPORAL_ALPHA,
-) -> tuple[np.ndarray, float]:
+) -> tuple[np.ndarray, np.ndarray, float]:
     """
-    Load audio and compute per-frame waveform samples.
+    Load audio and compute per-frame waveform samples and RMS energy.
 
     Returns:
         frames_samples: shape (n_frames, n_columns) – amplitude values in [-1, 1]
+        frames_rms:     shape (n_frames,)            – RMS energy per frame in [0, 1]
         duration: total duration in seconds
     """
     print("Loading audio...")
@@ -352,7 +359,21 @@ def analyze_audio(
             + (1.0 - temporal_alpha) * frames_samples[i - 1]
         )
 
-    return frames_samples, duration
+    # Per-frame RMS computed from the raw audio signal (not the waveform display
+    # samples, which are spatially resampled and smoothed). Use a wider window
+    # (~200 ms) centred at each frame midpoint to get a stable loudness reading.
+    rms_window = int(sr * 0.20)
+    frames_rms = np.zeros(n_frames, dtype=np.float32)
+    for i in range(n_frames):
+        center = int(i * hop + hop / 2)
+        half_r = rms_window // 2
+        start_r = max(0, center - half_r)
+        end_r = min(len(y), center + half_r + 1)
+        chunk_r = y[start_r:end_r]
+        if len(chunk_r) > 0:
+            frames_rms[i] = float(np.sqrt(np.mean(chunk_r**2)))
+
+    return frames_samples, frames_rms, duration
 
 
 # ---------------------------------------------------------------------------
@@ -385,17 +406,44 @@ def prepare_background(image_path: str) -> Image.Image:
     top = (new_h - HEIGHT) // 2
     bg = bg.crop((left, top, left + WIDTH, top + HEIGHT))
 
-    # Darken overlay
-    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, BG_DARKEN_ALPHA))
-    bg = bg.convert("RGBA")
-    bg = Image.alpha_composite(bg, overlay).convert("RGB")
-
     return bg
 
 
 # ---------------------------------------------------------------------------
 # Frame rendering
 # ---------------------------------------------------------------------------
+
+
+def render_vignette(intensity: float) -> Image.Image:
+    """
+    Build a radial vignette layer (RGBA) whose edge darkness scales with
+    *intensity* (0.0 = invisible, 1.0 = VIGNETTE_MAX_ALPHA at the corners).
+
+    The mask is computed once via numpy: a smooth elliptical gradient that is
+    darkest at the four corners and fully transparent at the centre.
+    """
+    if intensity <= 0.0:
+        return Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+
+    # Normalised distance from centre — ranges 0 (centre) → ~1.41 (corner)
+    cx, cy = WIDTH / 2.0, HEIGHT / 2.0
+    xs = (np.arange(WIDTH, dtype=np.float32) - cx) / cx  # -1 … +1
+    ys = (np.arange(HEIGHT, dtype=np.float32) - cy) / cy  # -1 … +1
+    xx, yy = np.meshgrid(xs, ys)
+    dist = np.sqrt(xx**2 + yy**2)  # 0 … ~1.414
+
+    # Smooth vignette shape: raise dist to a power and clamp to [0, 1]
+    # power=1.6 gives a gentle falloff; increase for a tighter edge.
+    vig = np.clip(dist**1.6, 0.0, 1.0)
+
+    alpha_max = int(VIGNETTE_MAX_ALPHA * intensity)
+    alpha_channel = (vig * alpha_max).astype(np.uint8)
+
+    rgba = np.zeros((HEIGHT, WIDTH, 4), dtype=np.uint8)
+    # RGB stays black (0); only alpha varies
+    rgba[:, :, 3] = alpha_channel
+
+    return Image.fromarray(rgba, "RGBA")
 
 
 def render_frame(
@@ -412,6 +460,7 @@ def render_frame(
     font_artist: ImageFont.FreeTypeFont,
     font_album: ImageFont.FreeTypeFont,
     font_time: ImageFont.FreeTypeFont,
+    vignette_intensity: float = 0.0,
 ) -> Image.Image:
     # ---- Fade alphas -------------------------------------------------------
     alpha_bg, alpha_wave, alpha_ui = compute_fade_alphas(frame_idx, n_frames, FPS)
@@ -423,6 +472,13 @@ def render_frame(
         frame = bg.copy().convert("RGBA")
     else:
         frame = Image.blend(black, bg.convert("RGB"), alpha_bg).convert("RGBA")
+
+    # ---- Vignette layer ----------------------------------------------------
+    # Scaled by alpha_bg so it fades in together with the background.
+    vig_intensity = vignette_intensity * alpha_bg
+    if vig_intensity > 0.0:
+        vignette_layer = render_vignette(vig_intensity)
+        frame = Image.alpha_composite(frame, vignette_layer)
 
     # ---- Wave layer -------------------------------------------------------
     wave_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
@@ -640,15 +696,16 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         color,
         font_path,
         font_bold_path,
+        vignette_intensity,
     ) = args_tuple
 
     samples = np.frombuffer(samples_bytes, dtype=np.float32).copy()
     bg = Image.frombytes("RGB", bg_size, bg_bytes)
 
-    font_title = load_font_bold(64, font_bold_path)
-    font_artist = load_font_regular(48, font_path)
-    font_album = load_font_regular(40, font_path)
-    font_time = load_font_regular(32, font_path)
+    font_title = load_font_bold(80, font_bold_path)
+    font_artist = load_font_regular(60, font_path)
+    font_album = load_font_regular(50, font_path)
+    font_time = load_font_regular(40, font_path)
 
     img = render_frame(
         bg=bg,
@@ -664,6 +721,7 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         font_artist=font_artist,
         font_album=font_album,
         font_time=font_time,
+        vignette_intensity=vignette_intensity,
     )
     return frame_idx, img.tobytes()  # raw RGB24
 
@@ -719,6 +777,7 @@ def _build_video_codec_args(gpu: str) -> list[str]:
 
 def render_and_encode(
     frames_samples: np.ndarray,
+    frames_rms: np.ndarray,
     bg: Image.Image,
     n_frames: int,
     duration: float,
@@ -816,6 +875,21 @@ def render_and_encode(
     bg_bytes = bg.tobytes()
     bg_size = (bg.width, bg.height)
 
+    # Pre-compute per-frame vignette intensity using asymmetric EMA so that
+    # loud peaks trigger fast and the effect decays slowly after they pass.
+    # Uses the raw RMS energy (computed in analyze_audio) rather than the
+    # display waveform samples, which are spatially resampled and smoothed.
+    vignette_intensities = np.zeros(n_frames, dtype=np.float32)
+    ema = 0.0
+    for i in range(n_frames):
+        rms = float(frames_rms[i])
+        excess = max(
+            0.0, (rms - VIGNETTE_RMS_THRESHOLD) / (1.0 - VIGNETTE_RMS_THRESHOLD)
+        )
+        alpha = VIGNETTE_ATTACK if excess > ema else VIGNETTE_DECAY
+        ema = alpha * excess + (1.0 - alpha) * ema
+        vignette_intensities[i] = min(ema, 1.0)
+
     tasks = [
         (
             i,
@@ -831,6 +905,7 @@ def render_and_encode(
             color,
             font_path,
             font_bold_path,
+            float(vignette_intensities[i]),
         )
         for i in range(n_frames)
     ]
@@ -1037,7 +1112,7 @@ def process_file(
     display_artist = f"{prefixes['artist']}{artist}" if artist else artist
     display_album = f"{prefixes['album']}{album}" if album else album
 
-    frames_samples, duration = analyze_audio(
+    frames_samples, frames_rms, duration = analyze_audio(
         audio_path,
         FPS,
         smoothing_window=args.smoothing_window,
@@ -1054,6 +1129,7 @@ def process_file(
     )
     render_and_encode(
         frames_samples=frames_samples,
+        frames_rms=frames_rms,
         bg=bg,
         n_frames=n_frames,
         duration=duration,
