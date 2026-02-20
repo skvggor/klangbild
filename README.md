@@ -4,7 +4,6 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 - Centered, mirrored waveform (1800 × 300 px) that reacts to the audio
 - Background image rendered as-is, without any darkening overlay
-- Dynamic vignette that darkens the edges on loud peaks and fades out smoothly
 - Song title, artist, album, and a seek bar in the lower-left corner
 - Staggered fade-in / fade-out (background → wave → UI)
 - Infinite-wave edge fade effect
@@ -113,17 +112,6 @@ The output frame is 3840×2160 px. Key measurements:
 | Seek bar distance from bottom | 120 px |
 
 A reference layout image (`bg_spec.png`) is generated in the project root and can be used as a template when preparing background images.
-
-### Dynamic vignette
-
-A radial vignette (black at the corners, transparent at the centre) is composited over the background whenever the audio is loud. The effect is driven by the per-frame RMS energy of the raw audio signal:
-
-- Activates above `VIGNETTE_RMS_THRESHOLD = 0.25` (normalised RMS)
-- Responds quickly to peaks (`VIGNETTE_ATTACK = 0.85`)
-- Fades out slowly after the peak passes (`VIGNETTE_DECAY = 0.12`)
-- Maximum edge opacity: `VIGNETTE_MAX_ALPHA = 180` (out of 255)
-
-All four constants are at the top of `visualizer.py` and can be tuned freely.
 
 ---
 
