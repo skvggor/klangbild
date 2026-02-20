@@ -13,6 +13,14 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 ---
 
+## Example
+
+| Video (frame) | Cover image |
+|:-------------:|:-----------:|
+| ![Video frame](assets/video.png) | ![Cover](assets/cover.jpg) |
+
+---
+
 ## Requirements
 
 - Python ≥ 3.11

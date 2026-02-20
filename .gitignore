@@ -21,6 +21,9 @@ build/
 *.jpg
 *.jpeg
 *.png
+!assets/*.jpg
+!assets/*.jpeg
+!assets/*.png
 
 # OS
 .DS_Store
