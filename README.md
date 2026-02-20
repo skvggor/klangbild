@@ -17,7 +17,7 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 | Video (frame) | Cover image |
 |:-------------:|:-----------:|
-| ![Video frame](assets/video.png) | ![Cover](assets/cover.jpg) |
+| ![Video frame](assets/video.jpg) | ![Cover](assets/cover.jpg) |
 
 ---
 
