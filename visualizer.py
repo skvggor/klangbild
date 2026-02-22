@@ -36,6 +36,16 @@ GPU options for --gpu:
     nvenc  NVIDIA GPU
     vaapi  Intel/AMD via VA-API
 
+Layout options for --layout:
+    classic      Original layout (default)
+    spotlight    Large centred text + big seek bar above + waves below
+    split-left   Waves on the left, text on the right, full-width seek below
+    split-right  Text on the left, waves on the right, full-width seek below
+
+Wave style options for --wave-style:
+    line      Mirrored waveform lines (default)
+    circular  Radial/circular waveform (bars projected from a circle)
+
 --workers:        parallel CPU workers for frame rendering (default: cpu_count - 2)
 --font:           .ttf/.otf for regular text (artist, album, time)
 --font-bold:      .ttf/.otf for bold text (title)
@@ -54,7 +64,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 from mutagen.id3 import ID3
-from mutagen import MutagenError
+from mutagen._util import MutagenError
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 
@@ -91,6 +101,169 @@ TEXT_Y_ARTIST = TEXT_Y_ALBUM - 65
 TEXT_Y_TITLE = TEXT_Y_ARTIST - 95
 
 
+# ---------------------------------------------------------------------------
+# Layout configurations
+# ---------------------------------------------------------------------------
+# Each layout returns a dict with all the geometry needed by render_frame.
+# Keys: wave_width, wave_height, wave_center_x, wave_center_y,
+#       wave_x_start, seek_bar_x, seek_bar_y, seek_bar_w, seek_bar_h,
+#       text_x, text_y_title, text_y_artist, text_y_album, text_y_time,
+#       font_size_title, font_size_artist, font_size_album, font_size_time,
+#       text_anchor (None = left, "center" = centred)
+#       wave_fade_width
+
+
+def get_layout_config(layout: str) -> dict:
+    """Return geometry constants for the given layout name."""
+
+    if layout == "spotlight":
+        # Large centred text, big seek bar above text, waveform below centre
+        # Generous margins between all elements
+        _seek_h = 10
+        _seek_w = 2800
+        _seek_x = (WIDTH - _seek_w) // 2
+        _seek_y = HEIGHT // 2 - 400  # more margin above text block
+
+        # Text block: centred, large fonts, with spacing between each line
+        _text_x = WIDTH // 2
+        _text_y_title = HEIGHT // 2 - 100
+        _text_y_artist = _text_y_title + 180  # more gap
+        _text_y_album = _text_y_artist + 140  # more gap
+        _text_y_time = _text_y_album + 140  # more gap
+
+        # Waveform: wide, below the text block with generous margin
+        _wave_w = 2800
+        _wave_h = 200
+        _wave_cx = WIDTH // 2
+        _wave_cy = _text_y_time + 400  # more margin below time for circular
+        _wave_x_start = (WIDTH - _wave_w) // 2
+
+        return dict(
+            wave_width=_wave_w,
+            wave_height=_wave_h,
+            wave_center_x=_wave_cx,
+            wave_center_y=_wave_cy,
+            wave_x_start=_wave_x_start,
+            seek_bar_x=_seek_x,
+            seek_bar_y=_seek_y,
+            seek_bar_w=_seek_w,
+            seek_bar_h=_seek_h,
+            text_x=_text_x,
+            text_y_title=_text_y_title,
+            text_y_artist=_text_y_artist,
+            text_y_album=_text_y_album,
+            text_y_time=_text_y_time,
+            font_size_title=120,
+            font_size_artist=80,
+            font_size_album=64,
+            font_size_time=56,
+            text_anchor="center",
+            wave_fade_width=220,
+            circular_radius=450,  # fits below text block
+        )
+
+    if layout in ("split-left", "split-right"):
+        # Two-column layout within a 2500px central area
+        # Structure: gap | coluna | gap | coluna | gap
+        _central_area = 2500
+        _gap = 80  # gap between columns and edges
+        # Each column = (central_area - 3 * gap) / 2
+        _col_w = (_central_area - 3 * _gap) // 2
+
+        _central_start = (WIDTH - _central_area) // 2
+
+        # Waveform column: centred vertically
+        _wave_h = 280
+        _wave_cy = HEIGHT // 2
+
+        if layout == "split-left":
+            # Wave on left column, text on right
+            _wave_col_start = _central_start + _gap
+            _wave_col_end = _wave_col_start + _col_w
+            _wave_cx = _wave_col_start + _col_w // 2
+            _wave_x_start = _wave_col_start
+
+            # Text column (right)
+            _text_col_start = _wave_col_end + _gap
+            _text_x = _text_col_start  # left-aligned in text column
+            _text_anchor = None  # left-aligned
+        else:
+            # Text on left column, wave on right
+            _text_col_start = _central_start + _gap
+            _text_x = _text_col_start + _col_w  # right-aligned at end of text column
+            _text_anchor = "right"
+
+            # Wave column (right)
+            _wave_col_start = _text_col_start + _col_w + _gap
+            _wave_cx = _wave_col_start + _col_w // 2
+            _wave_x_start = _wave_col_start
+
+        _wave_w = _col_w
+
+        # Text: vertically centred as a block
+        _block_h = 120 + 90 + 80 + 70  # title + artist + album + time heights approx
+        _text_y_title = HEIGHT // 2 - _block_h // 2
+        _text_y_artist = _text_y_title + 140
+        _text_y_album = _text_y_artist + 110
+        _text_y_time = _text_y_album + 100
+
+        # Seek bar: full-width below both columns
+        _margin = 160
+        _seek_h = 10
+        _seek_w = WIDTH - 2 * _margin
+        _seek_x = _margin
+        _seek_y = HEIGHT - 160
+
+        return dict(
+            wave_width=_wave_w,
+            wave_height=_wave_h,
+            wave_center_x=_wave_cx,
+            wave_center_y=_wave_cy,
+            wave_x_start=_wave_x_start,
+            seek_bar_x=_seek_x,
+            seek_bar_y=_seek_y,
+            seek_bar_w=_seek_w,
+            seek_bar_h=_seek_h,
+            text_x=_text_x,
+            text_y_title=_text_y_title,
+            text_y_artist=_text_y_artist,
+            text_y_album=_text_y_album,
+            text_y_time=_text_y_time,
+            font_size_title=100,
+            font_size_artist=72,
+            font_size_album=60,
+            font_size_time=52,
+            text_anchor=_text_anchor,
+            wave_fade_width=140,
+            circular_radius=450,  # fits within column
+        )
+
+    # classic (default) — original layout
+    return dict(
+        wave_width=WAVE_WIDTH,
+        wave_height=WAVE_HEIGHT,
+        wave_center_x=WIDTH // 2,
+        wave_center_y=WAVE_CENTER_Y,
+        wave_x_start=WAVE_X_START,
+        seek_bar_x=SEEK_BAR_X,
+        seek_bar_y=SEEK_BAR_Y,
+        seek_bar_w=SEEK_BAR_W,
+        seek_bar_h=SEEK_BAR_H,
+        text_x=TEXT_X,
+        text_y_title=TEXT_Y_TITLE,
+        text_y_artist=TEXT_Y_ARTIST,
+        text_y_album=TEXT_Y_ALBUM,
+        text_y_time=TEXT_Y_TIME,
+        font_size_title=80,
+        font_size_artist=60,
+        font_size_album=50,
+        font_size_time=40,
+        text_anchor=None,
+        wave_fade_width=WAVE_FADE_WIDTH,
+        circular_radius=500,  # large circle for classic
+    )
+
+
 # Waveform smoothing
 SMOOTHING_WINDOW = 15  # spatial: moving-average window along the X axis of each frame
 #   larger = smoother shape per frame (was 7)
@@ -111,13 +284,13 @@ LANG_PREFIXES: dict[str, dict[str, str]] = {
 }
 
 # Fade in / fade out
-FADE_DURATION = 2.0  # seconds for the full fade window at each end
+FADE_DURATION = 3.0  # seconds for the full fade window at each end
 # Staggered delays within the fade window (seconds after fade window starts)
-FADE_DELAY_WAVE = 0.3  # wave starts fading in after the background
-FADE_DELAY_UI = 0.6  # texts + seek start fading in after the background
+FADE_DELAY_WAVE = 0.5  # wave starts fading in after the background
+FADE_DELAY_UI = 1.0  # texts + seek start fading in after the background
 #
-# Fade-in order:  bg (0.0s) → wave (0.3s) → ui (0.6s)  — all finish at 2.0s
-# Fade-out order: ui (end-2.0s) → wave (end-1.7s) → bg (end-1.4s) — all finish at end
+# Fade-in order:  bg (0.0s) → wave (0.5s) → ui (1.0s)  — all finish at 3.0s
+# Fade-out order: ui (end-3.0s) → wave (end-2.5s) → bg (end-2.0s) — all finish at end
 
 
 # ---------------------------------------------------------------------------
@@ -290,6 +463,7 @@ def analyze_audio(
     fps: int,
     smoothing_window: int = SMOOTHING_WINDOW,
     temporal_alpha: float = TEMPORAL_ALPHA,
+    wave_width: int = WAVE_WIDTH,
 ) -> tuple[np.ndarray, float]:
     """
     Load audio and compute per-frame waveform samples.
@@ -318,7 +492,7 @@ def analyze_audio(
     if window_samples % 2 == 0:
         window_samples += 1
 
-    n_columns = WAVE_WIDTH  # one waveform point per horizontal pixel
+    n_columns = wave_width  # one waveform point per horizontal pixel
 
     print(f"Duration: {duration:.1f}s  |  Frames: {n_frames}  |  SR: {sr} Hz")
 
@@ -388,6 +562,125 @@ def prepare_background(image_path: str) -> Image.Image:
 
 
 # ---------------------------------------------------------------------------
+# Waveform drawing helpers
+# ---------------------------------------------------------------------------
+
+
+def draw_wave_line(
+    wave_draw: ImageDraw.ImageDraw,
+    samples: np.ndarray,
+    lc: dict,
+    wave_color: tuple,
+    wave_fill: tuple,
+    centre_color: tuple,
+) -> None:
+    """Draw the classic mirrored-line waveform."""
+    n_cols = len(samples)
+    w_width = lc["wave_width"]
+    w_height = lc["wave_height"]
+    w_x_start = lc["wave_x_start"]
+    w_cy = lc["wave_center_y"]
+
+    xs = np.linspace(w_x_start, w_x_start + w_width, n_cols, dtype=int)
+    amplitudes = np.clip(samples, -1.0, 1.0)
+
+    peak = np.percentile(np.abs(amplitudes), 99)
+    if peak > 0:
+        amplitudes = amplitudes / peak * 0.80
+
+    ys = (amplitudes * w_height).astype(int)
+
+    poly_top = [(xs[i], w_cy - ys[i]) for i in range(n_cols)]
+    poly_bot = [(xs[i], w_cy + ys[i]) for i in range(n_cols - 1, -1, -1)]
+    wave_draw.polygon(poly_top + poly_bot, fill=wave_fill)
+
+    top_points = [(xs[i], w_cy - ys[i]) for i in range(n_cols)]
+    bot_points = [(xs[i], w_cy + ys[i]) for i in range(n_cols)]
+    if len(top_points) > 1:
+        wave_draw.line(top_points, fill=wave_color, width=3)
+        wave_draw.line(bot_points, fill=wave_color, width=3)
+
+
+def draw_wave_circular(
+    wave_draw: ImageDraw.ImageDraw,
+    samples: np.ndarray,
+    lc: dict,
+    wave_color: tuple,
+    wave_fill: tuple,
+    centre_color: tuple,
+) -> None:
+    """
+    Draw a radial/circular waveform — bars project outward from a ring.
+    Gradient effect: brighter/more opaque near the inner ring, fading outward.
+    """
+    cx = lc["wave_center_x"]
+    cy = lc["wave_center_y"]
+    max_radius = lc.get("circular_radius", 400)
+    inner_r = max_radius * 0.35
+    max_bar = max_radius * 0.55
+
+    n_bars = min(len(samples), 240)
+
+    indices = np.linspace(0, len(samples) - 1, n_bars, dtype=int)
+    bar_amps = np.abs(np.clip(samples[indices], -1.0, 1.0))
+
+    peak = np.percentile(bar_amps, 99)
+    if peak > 0:
+        bar_amps = bar_amps / peak * 0.90
+
+    # Draw subtle inner circle
+    r_int = int(inner_r)
+    wave_draw.ellipse(
+        [cx - r_int, cy - r_int, cx + r_int, cy + r_int],
+        outline=centre_color,
+        width=2,
+    )
+
+    base_r, base_g, base_b, base_alpha = wave_color
+
+    for i in range(n_bars):
+        angle = 2.0 * np.pi * i / n_bars - np.pi / 2
+        amp = float(bar_amps[i])
+        bar_len = max_bar * amp + 8
+
+        n_segments = max(4, int(bar_len / 6))
+        for seg in range(n_segments):
+            seg_start = inner_r + (bar_len * seg / n_segments)
+            seg_end = inner_r + (bar_len * (seg + 1) / n_segments)
+
+            x1 = cx + np.cos(angle) * seg_start
+            y1 = cy + np.sin(angle) * seg_start
+            x2 = cx + np.cos(angle) * seg_end
+            y2 = cy + np.sin(angle) * seg_end
+
+            # Gradient: high alpha at inner ring, lower at outer
+            # Also respect the base_alpha from fade
+            t = seg / n_segments
+            gradient_factor = 1.0 - t * 0.5
+            amp_factor = 0.6 + 0.4 * amp
+            seg_alpha = int(base_alpha * gradient_factor * amp_factor)
+            seg_col = (base_r, base_g, base_b, seg_alpha)
+
+            wave_draw.line(
+                [(int(x1), int(y1)), (int(x2), int(y2))],
+                fill=seg_col,
+                width=5,
+            )
+
+        # Dot at tip
+        x_outer = cx + np.cos(angle) * (inner_r + bar_len)
+        y_outer = cy + np.sin(angle) * (inner_r + bar_len)
+        dot_alpha = int(base_alpha * 0.7 * amp)
+        dot_col = (base_r, base_g, base_b, dot_alpha)
+        dot_r = 4
+        ix, iy = int(x_outer), int(y_outer)
+        wave_draw.ellipse(
+            [ix - dot_r, iy - dot_r, ix + dot_r, iy + dot_r],
+            fill=dot_col,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Frame rendering
 # ---------------------------------------------------------------------------
 
@@ -406,12 +699,16 @@ def render_frame(
     font_artist: ImageFont.FreeTypeFont,
     font_album: ImageFont.FreeTypeFont,
     font_time: ImageFont.FreeTypeFont,
+    layout_config: dict | None = None,
+    wave_style: str = "line",
 ) -> Image.Image:
+    # Use classic layout if none provided (backwards compat)
+    lc = layout_config if layout_config is not None else get_layout_config("classic")
+
     # ---- Fade alphas -------------------------------------------------------
     alpha_bg, alpha_wave, alpha_ui = compute_fade_alphas(frame_idx, n_frames, FPS)
 
     # ---- Background with fade ---------------------------------------------
-    # Composite the background over a pure black canvas using alpha_bg.
     black = Image.new("RGB", (WIDTH, HEIGHT), (0, 0, 0))
     if alpha_bg >= 1.0:
         frame = bg.copy().convert("RGBA")
@@ -422,7 +719,6 @@ def render_frame(
     wave_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     wave_draw = ImageDraw.Draw(wave_layer, "RGBA")
 
-    # Scale all wave alphas by alpha_wave
     def wa(base: int) -> int:
         return int(base * alpha_wave)
 
@@ -430,47 +726,30 @@ def render_frame(
     wave_fill = hex_to_rgba(color, wa(50))
     centre_color = hex_to_rgba(color, wa(40))
 
-    n_cols = len(samples)
-    xs = np.linspace(WAVE_X_START, WAVE_X_START + WAVE_WIDTH, n_cols, dtype=int)
-    amplitudes = np.clip(samples, -1.0, 1.0)
-
-    peak = np.percentile(np.abs(amplitudes), 99)
-    if peak > 0:
-        amplitudes = amplitudes / peak * 0.80
-
-    ys = (amplitudes * WAVE_HEIGHT).astype(int)
-
-    poly_top = [(xs[i], WAVE_CENTER_Y - ys[i]) for i in range(n_cols)]
-    poly_bot = [(xs[i], WAVE_CENTER_Y + ys[i]) for i in range(n_cols - 1, -1, -1)]
-    wave_draw.polygon(poly_top + poly_bot, fill=wave_fill)
-
-    top_points = [(xs[i], WAVE_CENTER_Y - ys[i]) for i in range(n_cols)]
-    bot_points = [(xs[i], WAVE_CENTER_Y + ys[i]) for i in range(n_cols)]
-    if len(top_points) > 1:
-        wave_draw.line(top_points, fill=wave_color, width=3)
-        wave_draw.line(bot_points, fill=wave_color, width=3)
-
-    wave_draw.line(
-        [(WAVE_X_START, WAVE_CENTER_Y), (WAVE_X_START + WAVE_WIDTH, WAVE_CENTER_Y)],
-        fill=centre_color,
-        width=1,
-    )
+    # Draw waveform with selected style
+    if wave_style == "circular":
+        draw_wave_circular(wave_draw, samples, lc, wave_color, wave_fill, centre_color)
+    else:
+        draw_wave_line(wave_draw, samples, lc, wave_color, wave_fill, centre_color)
 
     # Edge fade (horizontal gradient → infinite-wave illusion)
-    wave_arr = np.array(wave_layer, dtype=np.float32)
-    fade = np.ones(WIDTH, dtype=np.float32)
-    x0, x1 = WAVE_X_START, WAVE_X_START + WAVE_WIDTH
-    fade[x0 : x0 + WAVE_FADE_WIDTH] = np.linspace(0.0, 1.0, WAVE_FADE_WIDTH)
-    fade[x1 - WAVE_FADE_WIDTH : x1] = np.linspace(1.0, 0.0, WAVE_FADE_WIDTH)
-    fade[:x0] = 0.0
-    fade[x1:] = 0.0
-    wave_arr[:, :, 3] *= fade[np.newaxis, :]
-    wave_layer = Image.fromarray(np.clip(wave_arr, 0, 255).astype(np.uint8), "RGBA")
+    # Only apply for line style; circular doesn't need it
+    if wave_style == "line":
+        wave_arr = np.array(wave_layer, dtype=np.float32)
+        fade = np.ones(WIDTH, dtype=np.float32)
+        x0 = lc["wave_x_start"]
+        x1 = x0 + lc["wave_width"]
+        fw = lc["wave_fade_width"]
+        fade[x0 : x0 + fw] = np.linspace(0.0, 1.0, fw)
+        fade[x1 - fw : x1] = np.linspace(1.0, 0.0, fw)
+        fade[:x0] = 0.0
+        fade[x1:] = 0.0
+        wave_arr[:, :, 3] *= fade[np.newaxis, :]
+        wave_layer = Image.fromarray(np.clip(wave_arr, 0, 255).astype(np.uint8), "RGBA")
 
     frame = Image.alpha_composite(frame, wave_layer)
 
     # ---- UI layer (seek bar + text) ---------------------------------------
-    # Drawn onto a separate transparent layer so alpha_ui applies cleanly.
     ui_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(ui_layer, "RGBA")
 
@@ -478,27 +757,31 @@ def render_frame(
         return int(base * alpha_ui)
 
     text_color = hex_to_rgba(color, ua(255))
-    shadow_color = (0, 0, 0, ua(160))
     seek_bg_color = hex_to_rgba(color, ua(50))
     seek_fg_color = hex_to_rgba(color, ua(220))
     dot_color = hex_to_rgba(color, ua(255))
 
     # Seek bar
+    sb_x = lc["seek_bar_x"]
+    sb_y = lc["seek_bar_y"]
+    sb_w = lc["seek_bar_w"]
+    sb_h = lc["seek_bar_h"]
+
     progress = frame_idx / max(n_frames - 1, 1)
-    filled_w = int(SEEK_BAR_W * progress)
+    filled_w = int(sb_w * progress)
 
     draw.rectangle(
-        [SEEK_BAR_X, SEEK_BAR_Y, SEEK_BAR_X + SEEK_BAR_W, SEEK_BAR_Y + SEEK_BAR_H],
+        [sb_x, sb_y, sb_x + sb_w, sb_y + sb_h],
         fill=seek_bg_color,
     )
     if filled_w > 0:
         draw.rectangle(
-            [SEEK_BAR_X, SEEK_BAR_Y, SEEK_BAR_X + filled_w, SEEK_BAR_Y + SEEK_BAR_H],
+            [sb_x, sb_y, sb_x + filled_w, sb_y + sb_h],
             fill=seek_fg_color,
         )
-    dot_r = 10
-    dot_x = SEEK_BAR_X + filled_w
-    dot_y = SEEK_BAR_Y + SEEK_BAR_H // 2
+    dot_r = max(10, sb_h)  # dot radius scales with seek bar height
+    dot_x = sb_x + filled_w
+    dot_y = sb_y + sb_h // 2
     draw.ellipse(
         [dot_x - dot_r, dot_y - dot_r, dot_x + dot_r, dot_y + dot_r],
         fill=dot_color,
@@ -507,19 +790,41 @@ def render_frame(
     # Time label
     elapsed = frame_idx / FPS
     time_str = f"{format_time(elapsed)} / {format_time(duration)}"
-    draw.text(
-        (TEXT_X + 2, TEXT_Y_TIME + 2), time_str, font=font_time, fill=shadow_color
-    )
-    draw.text((TEXT_X, TEXT_Y_TIME), time_str, font=font_time, fill=text_color)
+
+    tx = lc["text_x"]
+    anchor = lc["text_anchor"]
+
+    if anchor == "center":
+        draw.text(
+            (tx, lc["text_y_time"]),
+            time_str,
+            font=font_time,
+            fill=text_color,
+            anchor="mt",
+        )
+    elif anchor == "right":
+        draw.text(
+            (tx, lc["text_y_time"]),
+            time_str,
+            font=font_time,
+            fill=text_color,
+            anchor="rt",
+        )
+    else:
+        draw.text((tx, lc["text_y_time"]), time_str, font=font_time, fill=text_color)
 
     # Track info
     for text, font, y in [
-        (title, font_title, TEXT_Y_TITLE),
-        (artist, font_artist, TEXT_Y_ARTIST),
-        (album, font_album, TEXT_Y_ALBUM),
+        (title, font_title, lc["text_y_title"]),
+        (artist, font_artist, lc["text_y_artist"]),
+        (album, font_album, lc["text_y_album"]),
     ]:
-        draw.text((TEXT_X + 2, y + 2), text, font=font, fill=shadow_color)
-        draw.text((TEXT_X, y), text, font=font, fill=text_color)
+        if anchor == "center":
+            draw.text((tx, y), text, font=font, fill=text_color, anchor="mt")
+        elif anchor == "right":
+            draw.text((tx, y), text, font=font, fill=text_color, anchor="rt")
+        else:
+            draw.text((tx, y), text, font=font, fill=text_color)
 
     frame = Image.alpha_composite(frame, ui_layer)
 
@@ -546,7 +851,6 @@ def render_cover(
         title  (bold, 160px)
         artist (regular, 120px)
         album  (regular, 96px)
-    A subtle horizontal divider is drawn between the title and artist.
     """
     font_title = load_font_bold(160, font_bold_path)
     font_artist = load_font_regular(120, font_path)
@@ -556,8 +860,6 @@ def render_cover(
     draw = ImageDraw.Draw(cover, "RGBA")
 
     text_color = hex_to_rgba(color, 255)
-    shadow_color = (0, 0, 0, 180)
-    div_color = hex_to_rgba(color, 80)
 
     cx = WIDTH // 2  # horizontal centre
 
@@ -570,15 +872,10 @@ def render_cover(
     aw, ah = text_size(artist, font_artist)
     lw, lh = text_size(album, font_album)
 
-    GAP_TITLE_DIV = 40  # px between title bottom and divider
-    DIV_HEIGHT = 4
-    DIV_WIDTH = max(tw, aw, lw) + 160
-    GAP_DIV_ARTIST = 40  # px between divider bottom and artist top
-    GAP_ARTIST_ALBUM = 32  # px between artist bottom and album top
+    GAP_TITLE_ARTIST = 80  # px between title bottom and artist top
+    GAP_ARTIST_ALBUM = 60  # px between artist bottom and album top
 
-    block_h = (
-        th + GAP_TITLE_DIV + DIV_HEIGHT + GAP_DIV_ARTIST + ah + GAP_ARTIST_ALBUM + lh
-    )
+    block_h = th + GAP_TITLE_ARTIST + ah + GAP_ARTIST_ALBUM + lh
 
     # Centre the whole block vertically
     y = (HEIGHT - block_h) // 2
@@ -586,19 +883,11 @@ def render_cover(
     def draw_text_centred(text: str, font: ImageFont.FreeTypeFont, y_top: int) -> None:
         w, _ = text_size(text, font)
         x = cx - w // 2
-        draw.text((x + 2, y_top + 2), text, font=font, fill=shadow_color)
         draw.text((x, y_top), text, font=font, fill=text_color)
 
     # Title
     draw_text_centred(title, font_title, y)
-    y += th + GAP_TITLE_DIV
-
-    # Divider
-    draw.rectangle(
-        [cx - DIV_WIDTH // 2, y, cx + DIV_WIDTH // 2, y + DIV_HEIGHT],
-        fill=div_color,
-    )
-    y += DIV_HEIGHT + GAP_DIV_ARTIST
+    y += th + GAP_TITLE_ARTIST
 
     # Artist
     draw_text_centred(artist, font_artist, y)
@@ -634,15 +923,19 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         color,
         font_path,
         font_bold_path,
+        layout_name,
+        wave_style,
     ) = args_tuple
 
     samples = np.frombuffer(samples_bytes, dtype=np.float32).copy()
     bg = Image.frombytes("RGB", bg_size, bg_bytes)
 
-    font_title = load_font_bold(80, font_bold_path)
-    font_artist = load_font_regular(60, font_path)
-    font_album = load_font_regular(50, font_path)
-    font_time = load_font_regular(40, font_path)
+    lc = get_layout_config(layout_name)
+
+    font_title = load_font_bold(lc["font_size_title"], font_bold_path)
+    font_artist = load_font_regular(lc["font_size_artist"], font_path)
+    font_album = load_font_regular(lc["font_size_album"], font_path)
+    font_time = load_font_regular(lc["font_size_time"], font_path)
 
     img = render_frame(
         bg=bg,
@@ -658,6 +951,8 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         font_artist=font_artist,
         font_album=font_album,
         font_time=font_time,
+        layout_config=lc,
+        wave_style=wave_style,
     )
     return frame_idx, img.tobytes()  # raw RGB24
 
@@ -727,6 +1022,8 @@ def render_and_encode(
     workers: int = 1,
     font_path: str | None = None,
     font_bold_path: str | None = None,
+    layout: str = "classic",
+    wave_style: str = "line",
 ) -> None:
     """
     Render all frames in parallel and stream raw RGB24 directly into FFmpeg
@@ -825,6 +1122,8 @@ def render_and_encode(
             color,
             font_path,
             font_bold_path,
+            layout,
+            wave_style,
         )
         for i in range(n_frames)
     ]
@@ -919,6 +1218,15 @@ Examples:
     parser.add_argument(
         "--background", required=True, help="Path to the background image."
     )
+    parser.add_argument(
+        "--cover-background",
+        default=None,
+        dest="cover_background",
+        help=(
+            "Path to a separate background image for the cover JPG. "
+            "If omitted, the same background as the video is used."
+        ),
+    )
     parser.add_argument("--title", default=None, help="Song title (single-file mode).")
     parser.add_argument(
         "--artist", default=None, help="Artist name (single-file mode)."
@@ -980,6 +1288,29 @@ Examples:
         ),
     )
     parser.add_argument(
+        "--layout",
+        choices=["classic", "spotlight", "split-left", "split-right"],
+        default="classic",
+        help=(
+            "Visual layout for the video. "
+            "'classic' = original layout (default); "
+            "'spotlight' = large centred text, big seek bar above, waves below; "
+            "'split-left' = waves on the left, text on the right, full-width seek below; "
+            "'split-right' = text on the left, waves on the right, full-width seek below."
+        ),
+    )
+    parser.add_argument(
+        "--wave-style",
+        choices=["line", "circular"],
+        default="line",
+        dest="wave_style",
+        help=(
+            "Waveform drawing style. "
+            "'line' = mirrored waveform lines (default); "
+            "'circular' = radial/circular waveform (bars projected from a circle)."
+        ),
+    )
+    parser.add_argument(
         "--smoothing-window",
         type=int,
         default=SMOOTHING_WINDOW,
@@ -1031,11 +1362,15 @@ def process_file(
     display_artist = f"{prefixes['artist']}{artist}" if artist else artist
     display_album = f"{prefixes['album']}{album}" if album else album
 
+    # Resolve layout geometry so analyze_audio uses the correct wave_width
+    lc = get_layout_config(args.layout)
+
     frames_samples, duration = analyze_audio(
         audio_path,
         FPS,
         smoothing_window=args.smoothing_window,
         temporal_alpha=args.temporal_alpha,
+        wave_width=lc["wave_width"],
     )
     n_frames = len(frames_samples)
 
@@ -1062,12 +1397,21 @@ def process_file(
         workers=args.workers,
         font_path=args.font,
         font_bold_path=args.font_bold,
+        layout=args.layout,
+        wave_style=args.wave_style,
     )
 
     cover_path = str(Path(output_path).with_suffix(".jpg"))
     print("Generating cover image...")
+
+    # Use separate background for cover if provided
+    if args.cover_background:
+        cover_bg = prepare_background(args.cover_background)
+    else:
+        cover_bg = bg
+
     cover = render_cover(
-        bg=bg,
+        bg=cover_bg,
         title=title,
         artist=display_artist,
         album=display_album,
