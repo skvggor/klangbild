@@ -5,22 +5,35 @@
 
 Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (JPG) from any MP3 file.
 
-- Centered, mirrored waveform (1800 × 300 px) that reacts to the audio
+- Multiple layout options: classic, spotlight, split-left, split-right
+- Two waveform styles: mirrored lines or radial/circular
 - Background image rendered as-is, without any darkening overlay
-- Song title, artist, album, and a seek bar aligned to the left edge of the waveform
+- Song title, artist, album, and a seek bar positioned according to layout
 - Staggered fade-in / fade-out (background → wave → UI)
-- Infinite-wave edge fade effect
+- Infinite-wave edge fade effect (line style)
 - GPU encoding via NVENC or VAAPI (optional)
 - Parallel CPU frame rendering piped directly to FFmpeg (no temp files)
 - Batch mode: process an entire folder of MP3s at once
 
 ---
 
-## Example
+## Examples
 
-| Video (frame) | Cover image |
-|:-------------:|:-----------:|
-| ![Video frame](assets/video.jpg) | ![Cover](assets/cover.jpg) |
+### Example 1: Classic + Line
+
+| Video frame | Cover image |
+|:-----------:|:-----------:|
+| ![Video frame](assets/example1_frame.jpg) | ![Cover](assets/example1_cover.jpg) |
+
+*Enkelmåte — "Enkelmåte" from Hvis Havet Ikke Hører Meg*
+
+### Example 2: Split-left + Circular
+
+| Video frame | Cover image |
+|:-----------:|:-----------:|
+| ![Video frame](assets/example2_frame.jpg) | ![Cover](assets/example2_cover.jpg) |
+
+*SKVGGOR — "Jah Old Beat" from Random*
 
 ---
 
@@ -84,7 +97,8 @@ Each MP3 produces a `.mp4` and `.jpg` in the same folder.
 |------|---------|-------------|
 | `--audio` | — | Path to MP3/WAV (single-file mode) |
 | `--input-dir` | — | Folder of MP3s (batch mode) |
-| `--background` | **required** | Background image path |
+| `--background` | **required** | Background image path for video |
+| `--cover-background` | same as `--background` | Separate background image for cover JPG |
 | `--title` | filename stem | Song title |
 | `--artist` | `""` | Artist name |
 | `--album` | `""` | Album name |
@@ -95,26 +109,56 @@ Each MP3 produces a `.mp4` and `.jpg` in the same folder.
 | `--font` | system DejaVu/Liberation | Regular font `.ttf/.otf` |
 | `--font-bold` | system DejaVu Bold | Bold font `.ttf/.otf` |
 | `--lang` | `en` | Prefix language: `en` (by/from) · `pt` (por/de) |
+| `--layout` | `classic` | Visual layout (see below) |
+| `--wave-style` | `line` | Waveform drawing style (see below) |
 | `--smoothing-window` | `15` | Spatial waveform smoothing window |
 | `--temporal-alpha` | `0.35` | Temporal EMA between frames (0=frozen, 1=raw) |
 
 ---
 
-## Visual layout
+## Layouts
 
-The output frame is 3840×2160 px. Key measurements:
+The `--layout` flag controls how elements are positioned on the 3840×2160 canvas.
 
-| Element | Value |
-|---------|-------|
-| Waveform width | 1800 px (centered) |
-| Waveform amplitude | ±150 px (300 px total height) |
-| Font — title | 80 px bold |
-| Font — artist | 60 px regular |
-| Font — album | 50 px regular |
-| Font — time | 40 px regular |
-| Seek bar distance from bottom | 120 px |
+| Layout | Description |
+|--------|-------------|
+| `classic` | Original layout. Waveform centred, text stacked below, seek bar at bottom. |
+| `spotlight` | Large centred text with generous margins. Seek bar above text, waveform below. |
+| `split-left` | Two-column layout. Waveform on the left, text on the right, full-width seek bar at bottom. |
+| `split-right` | Two-column layout. Text on the left, waveform on the right, full-width seek bar at bottom. |
 
-A reference layout image (`assets/bg_spec.png`) is included in the repository and can be used as a template when preparing background images.
+Reference layout images are included in `assets/`:
+
+| Spec file | Description |
+|-----------|-------------|
+| `spec_classic_line.png` | classic + line waveform |
+| `spec_classic_circular.png` | classic + circular waveform |
+| `spec_spotlight_line.png` | spotlight + line waveform |
+| `spec_spotlight_circular.png` | spotlight + circular waveform |
+| `spec_split-left_line.png` | split-left + line waveform |
+| `spec_split-left_circular.png` | split-left + circular waveform |
+| `spec_split-right_line.png` | split-right + line waveform |
+| `spec_split-right_circular.png` | split-right + circular waveform |
+| `spec_cover.png` | cover image layout |
+
+Each spec shows:
+- Waveform area (blue for line, orange for circular)
+- Text area (green)
+- Seek bar (yellow)
+- Dimensions and positions
+
+---
+
+## Wave Styles
+
+The `--wave-style` flag controls how the waveform is drawn.
+
+| Style | Description |
+|-------|-------------|
+| `line` | Classic mirrored waveform lines with fill. |
+| `circular` | Radial waveform — bars project outward from a central ring. |
+
+Both styles react to the audio in real-time. The circular style works best with spotlight layout.
 
 ---
 
@@ -122,4 +166,3 @@ A reference layout image (`assets/bg_spec.png`) is included in the repository an
 
 - `<output>.mp4` — 3840×2160 (4K), 30 fps, H.264, AAC 320 kbps
 - `<output>.jpg` — 4K cover image with centered text
-
