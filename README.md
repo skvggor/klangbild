@@ -115,6 +115,7 @@ Each MP3 produces a `.mp4` and `.jpg` in the same folder.
 | `--text-gradient-dir` | `horizontal` | Text gradient direction: `horizontal` · `vertical` |
 | `--wave-gradient` | — | Gradient colors for waveform (see below) |
 | `--wave-gradient-dir` | `horizontal` | Waveform gradient direction: `horizontal` · `vertical` |
+| `--grain` | `0.0` | Film-grain intensity: `0.0` (off) → `1.0` (heavy) |
 | `--smoothing-window` | `15` | Spatial waveform smoothing window |
 | `--temporal-alpha` | `0.35` | Temporal EMA between frames (0=frozen, 1=raw) |
 
@@ -213,6 +214,35 @@ The `--wave-style` flag controls how the waveform is drawn.
 | `circular` | Radial waveform — bars project outward from a central ring. |
 
 Both styles react to the audio in real-time. The circular style works best with spotlight layout.
+
+---
+
+## Film Grain
+
+The `--grain` flag overlays animated film grain on every frame. The value is a float between `0.0` (no grain) and `1.0` (heavy grain). At `0.0` the effect is completely skipped with no performance cost.
+
+```bash
+# Subtle grain
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --grain 0.1
+
+# Noticeable grain
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --grain 0.25
+```
+
+Each frame uses a unique random seed so the grain animates naturally without repeating patterns.
+
+### Grain examples
+
+| Intensity | Preview |
+|-----------|---------|
+| `0.0` — off | ![grain off](assets/grain_00.jpg) |
+| `0.1` — subtle | ![grain 0.1](assets/grain_01.jpg) |
+| `0.25` — noticeable | ![grain 0.25](assets/grain_025.jpg) |
+| `0.15`, circular layout | ![grain circular](assets/grain_circular.jpg) |
 
 ---
 

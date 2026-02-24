@@ -905,6 +905,35 @@ def draw_wave_circular(
 # ---------------------------------------------------------------------------
 
 
+def apply_grain(img: Image.Image, intensity: float, frame_idx: int) -> Image.Image:
+    """
+    Overlay film-grain noise on *img* (RGB).
+
+    Each frame uses a different random seed so the grain animates naturally.
+    The noise is centred at 128 and blended additively:
+
+        output = clip(pixel + noise - 128, 0, 255)
+
+    At intensity=0.0 the image is unchanged; at intensity=1.0 the noise
+    amplitude spans ±128 (full range).
+
+    `intensity` — float in [0.0, 1.0].
+    `frame_idx` — used as RNG seed so every frame has unique grain.
+    """
+    if intensity <= 0.0:
+        return img
+
+    rng = np.random.default_rng(frame_idx)
+    arr = np.array(img, dtype=np.int16)
+
+    # Noise amplitude: 0 → 0 px, 1.0 → ±128 px
+    amplitude = int(round(intensity * 128))
+    noise = rng.integers(-amplitude, amplitude + 1, size=arr.shape, dtype=np.int16)
+
+    arr = np.clip(arr + noise, 0, 255).astype(np.uint8)
+    return Image.fromarray(arr, "RGB")
+
+
 def render_frame(
     bg: Image.Image,
     samples: np.ndarray,
@@ -925,6 +954,7 @@ def render_frame(
     wave_gradient_colors: list[tuple] | None = None,
     text_gradient_dir: str = "horizontal",
     wave_gradient_dir: str = "horizontal",
+    grain: float = 0.0,
 ) -> Image.Image:
     # Use classic layout if none provided (backwards compat)
     lc = layout_config if layout_config is not None else get_layout_config("classic")
@@ -1144,8 +1174,12 @@ def render_frame(
             draw.text((tx, y), text, font=font, fill=text_color)
 
     frame = Image.alpha_composite(frame, ui_layer)
+    result = frame.convert("RGB")
 
-    return frame.convert("RGB")
+    if grain > 0.0:
+        result = apply_grain(result, grain, frame_idx)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1275,6 +1309,7 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         wave_gradient_colors,
         text_gradient_dir,
         wave_gradient_dir,
+        grain,
     ) = args_tuple
 
     samples = np.frombuffer(samples_bytes, dtype=np.float32).copy()
@@ -1307,6 +1342,7 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         wave_gradient_colors=wave_gradient_colors,
         text_gradient_dir=text_gradient_dir,
         wave_gradient_dir=wave_gradient_dir,
+        grain=grain,
     )
     return frame_idx, img.tobytes()  # raw RGB24
 
@@ -1382,6 +1418,7 @@ def render_and_encode(
     wave_gradient_colors: list[tuple] | None = None,
     text_gradient_dir: str = "horizontal",
     wave_gradient_dir: str = "horizontal",
+    grain: float = 0.0,
 ) -> None:
     """
     Render all frames in parallel and stream raw RGB24 directly into FFmpeg
@@ -1486,6 +1523,7 @@ def render_and_encode(
             wave_gradient_colors,
             text_gradient_dir,
             wave_gradient_dir,
+            grain,
         )
         for i in range(n_frames)
     ]
@@ -1717,6 +1755,18 @@ Examples:
         ),
     )
     parser.add_argument(
+        "--grain",
+        type=float,
+        default=0.0,
+        help=(
+            "Film-grain intensity applied on top of every frame. "
+            "Range 0.0–1.0 (default: 0.0 = disabled). "
+            "Noise is frame-animated and blended as a neutral overlay "
+            "(values below 128 darken, above 128 lighten). "
+            "Suggested range: 0.05–0.20 for a subtle analogue feel."
+        ),
+    )
+    parser.add_argument(
         "--smoothing-window",
         type=int,
         default=SMOOTHING_WINDOW,
@@ -1817,6 +1867,7 @@ def process_file(
         wave_gradient_colors=wave_gradient_colors,
         text_gradient_dir=args.text_gradient_dir,
         wave_gradient_dir=args.wave_gradient_dir,
+        grain=args.grain,
     )
 
     cover_path = str(Path(output_path).with_suffix(".jpg"))
