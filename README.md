@@ -35,6 +35,45 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 *SKVGGOR — "Jah Old Beat" from Random*
 
+### Example 3: Classic + Line + Warm Gradient + Grain
+
+```bash
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --layout classic --wave-style line \
+    --text-gradient "#C8860A,#E4DBC9" \
+    --wave-gradient "#C8860A,#E4DBC9" \
+    --grain 0.1
+```
+
+![combo warm grain](assets/combo_warm_grain.jpg)
+
+### Example 4: Spotlight + Circular + Cool Gradient + Grain
+
+```bash
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --layout spotlight --wave-style circular \
+    --text-gradient "#7B9BAF,#B8A8C8" \
+    --wave-gradient "#7B9BAF,#B8A8C8" \
+    --grain 0.2
+```
+
+![combo cool grain](assets/combo_cool_grain.jpg)
+
+### Example 5: Split-right + Line + Pastel Gradient + Grain
+
+```bash
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --layout split-right --wave-style line \
+    --text-gradient "#D4A8A0,#A8C8B8" \
+    --wave-gradient "#D4A8A0,#A8C8B8" \
+    --grain 0.15
+```
+
+![combo pastel grain](assets/combo_pastel_grain.jpg)
+
 ---
 
 ## Requirements
