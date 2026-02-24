@@ -111,8 +111,62 @@ Each MP3 produces a `.mp4` and `.jpg` in the same folder.
 | `--lang` | `en` | Prefix language: `en` (by/from) · `pt` (por/de) |
 | `--layout` | `classic` | Visual layout (see below) |
 | `--wave-style` | `line` | Waveform drawing style (see below) |
+| `--text-gradient` | — | Gradient colors for text (see below) |
+| `--text-gradient-dir` | `horizontal` | Text gradient direction: `horizontal` · `vertical` |
+| `--wave-gradient` | — | Gradient colors for waveform (see below) |
+| `--wave-gradient-dir` | `horizontal` | Waveform gradient direction: `horizontal` · `vertical` |
 | `--smoothing-window` | `15` | Spatial waveform smoothing window |
 | `--temporal-alpha` | `0.35` | Temporal EMA between frames (0=frozen, 1=raw) |
+
+---
+
+## Gradients
+
+Both text and waveform support independent color gradients. Each flag accepts two or more `#RGB` or `#RRGGBB` values separated by commas.
+
+```bash
+# Text gradient only
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --text-gradient "#C8860A,#E4DBC9"
+
+# Waveform gradient only
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --wave-gradient "#7B9BAF,#B8A8C8"
+
+# Both combined, vertical direction
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --text-gradient "#C8860A,#E4DBC9" --text-gradient-dir vertical \
+    --wave-gradient "#7B9BAF,#B8A8C8" --wave-gradient-dir vertical
+
+# Three-stop gradient
+uv run python visualizer.py \
+    --audio "song.mp3" --background "cover.jpg" \
+    --text-gradient "#FF0000,#FFFFFF,#0000FF"
+```
+
+When `--text-gradient` is provided it overrides `--color` for all text elements. When `--wave-gradient` is provided it overrides `--color` for the waveform. Both flags are independent and can be combined freely.
+
+**Direction:**
+
+| Value | Text | Waveform (`line`) |
+|-------|------|-------------------|
+| `horizontal` *(default)* | left → right across each glyph | left → right across the wave |
+| `vertical` | top → bottom across each glyph | top → bottom across the wave |
+
+For the `circular` waveform style the gradient direction flag is ignored — colors cycle angularly around the ring instead.
+
+### Gradient examples
+
+| Name | Colors | Preview |
+|------|--------|---------|
+| Warm | `#C8860A → #E4DBC9` | ![warm](assets/gradient_quente.jpg) |
+| Cool | `#7B9BAF → #B8A8C8` | ![cool](assets/gradient_frio.jpg) |
+| High contrast | `#FFFFFF → #AAAAAA` | ![contrast](assets/gradient_contraste.jpg) |
+| Monochrome | `#C8B89A → #F5EFE0` | ![mono](assets/gradient_monocromo.jpg) |
+| Pastel | `#D4A8A0 → #A8C8B8` | ![pastel](assets/gradient_pastel.jpg) |
 
 ---
 
