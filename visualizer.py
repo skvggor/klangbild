@@ -36,6 +36,30 @@ GPU options for --gpu:
     nvenc  NVIDIA GPU
     vaapi  Intel/AMD via VA-API
 
+Layout options for --layout:
+    classic      Original layout (default)
+    spotlight    Large centred text + big seek bar above + waves below
+    split-left   Waves on the left, text on the right, full-width seek below
+    split-right  Text on the left, waves on the right, full-width seek below
+
+Wave style options for --wave-style:
+    line      Mirrored waveform lines (default)
+    circular  Radial/circular waveform (bars projected from a circle)
+
+Gradient options (at least 2 comma-separated #RGB or #RRGGBB colors):
+    --text-gradient "#FF0000,#0000FF"
+        Vertical gradient applied to all text (title, artist, album, time).
+        Overrides --color for text when provided.
+
+    --wave-gradient "#FF0000,#0000FF"
+        Gradient applied to the waveform.
+        line style:     vertical gradient (top → bottom)
+        circular style: angular gradient (bars cycle through colors)
+        Overrides --color for the waveform when provided.
+
+    Both flags are independent and can be combined:
+        --text-gradient "#FF0000,#FFFFFF,#0000FF" --wave-gradient "#00FF00,#FF00FF"
+
 --workers:        parallel CPU workers for frame rendering (default: cpu_count - 2)
 --font:           .ttf/.otf for regular text (artist, album, time)
 --font-bold:      .ttf/.otf for bold text (title)
@@ -54,7 +78,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 from mutagen.id3 import ID3
-from mutagen import MutagenError
+from mutagen._util import MutagenError
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 
@@ -69,8 +93,8 @@ FPS = 30
 
 # Waveform: small and centered (~300x50 visual equivalent scaled to 4K)
 # At 4K: 300px wide in 1080p = 1200px; 50px tall (half) in 1080p = 100px
-WAVE_WIDTH = 1200  # horizontal span in pixels
-WAVE_HEIGHT = 100  # max amplitude in pixels (half-side, mirrored)
+WAVE_WIDTH = 1800  # horizontal span in pixels
+WAVE_HEIGHT = 150  # max amplitude in pixels (half-side, mirrored)
 WAVE_CENTER_Y = HEIGHT // 2
 WAVE_X_START = (WIDTH - WAVE_WIDTH) // 2
 
@@ -84,14 +108,178 @@ SEEK_BAR_W = WAVE_WIDTH
 TEXT_X = SEEK_BAR_X
 # Time label sits above seek bar with comfortable breathing room
 TIME_MARGIN = 20  # gap between time text bottom and seek bar top
-TEXT_Y_TIME = SEEK_BAR_Y - 32 - TIME_MARGIN  # 32 ≈ font height at 32px
+TEXT_Y_TIME = SEEK_BAR_Y - 40 - TIME_MARGIN  # 40 ≈ font height at 40px
 # Track info stacks upward from the time label
-TEXT_Y_ALBUM = TEXT_Y_TIME - 52
-TEXT_Y_ARTIST = TEXT_Y_ALBUM - 52
-TEXT_Y_TITLE = TEXT_Y_ARTIST - 76
+TEXT_Y_ALBUM = TEXT_Y_TIME - 65
+TEXT_Y_ARTIST = TEXT_Y_ALBUM - 65
+TEXT_Y_TITLE = TEXT_Y_ARTIST - 95
 
-# Background processing
-BG_DARKEN_ALPHA = 140  # 0 = transparent, 255 = fully black (no blur)
+
+# ---------------------------------------------------------------------------
+# Layout configurations
+# ---------------------------------------------------------------------------
+# Each layout returns a dict with all the geometry needed by render_frame.
+# Keys: wave_width, wave_height, wave_center_x, wave_center_y,
+#       wave_x_start, seek_bar_x, seek_bar_y, seek_bar_w, seek_bar_h,
+#       text_x, text_y_title, text_y_artist, text_y_album, text_y_time,
+#       font_size_title, font_size_artist, font_size_album, font_size_time,
+#       text_anchor (None = left, "center" = centred)
+#       wave_fade_width
+
+
+def get_layout_config(layout: str) -> dict:
+    """Return geometry constants for the given layout name."""
+
+    if layout == "spotlight":
+        # Large centred text, big seek bar above text, waveform below centre
+        # Generous margins between all elements
+        _seek_h = 10
+        _seek_w = 2800
+        _seek_x = (WIDTH - _seek_w) // 2
+        _seek_y = HEIGHT // 2 - 400  # more margin above text block
+
+        # Text block: centred, large fonts, with spacing between each line
+        _text_x = WIDTH // 2
+        _text_y_title = HEIGHT // 2 - 100
+        _text_y_artist = _text_y_title + 180  # more gap
+        _text_y_album = _text_y_artist + 140  # more gap
+        _text_y_time = _text_y_album + 140  # more gap
+
+        # Waveform: wide, below the text block with generous margin
+        _wave_w = 2800
+        _wave_h = 200
+        _wave_cx = WIDTH // 2
+        _wave_cy = _text_y_time + 400  # more margin below time for circular
+        _wave_x_start = (WIDTH - _wave_w) // 2
+
+        return dict(
+            wave_width=_wave_w,
+            wave_height=_wave_h,
+            wave_center_x=_wave_cx,
+            wave_center_y=_wave_cy,
+            wave_x_start=_wave_x_start,
+            seek_bar_x=_seek_x,
+            seek_bar_y=_seek_y,
+            seek_bar_w=_seek_w,
+            seek_bar_h=_seek_h,
+            text_x=_text_x,
+            text_y_title=_text_y_title,
+            text_y_artist=_text_y_artist,
+            text_y_album=_text_y_album,
+            text_y_time=_text_y_time,
+            text_max_width=_seek_w,  # text must fit within seek bar width
+            font_size_title=120,
+            font_size_artist=80,
+            font_size_album=64,
+            font_size_time=56,
+            text_anchor="center",
+            wave_fade_width=220,
+            circular_radius=450,  # fits below text block
+        )
+
+    if layout in ("split-left", "split-right"):
+        # Two-column layout within a 3200px central area
+        # Structure: gap | coluna | gap | coluna | gap
+        _central_area = 3200
+        _gap = 80  # gap between columns and edges
+        # Each column = (central_area - 3 * gap) / 2
+        _col_w = (_central_area - 3 * _gap) // 2
+
+        _central_start = (WIDTH - _central_area) // 2
+
+        # Waveform column: centred vertically
+        _wave_h = 280
+        _wave_cy = HEIGHT // 2
+
+        if layout == "split-left":
+            # Wave on left column, text on right
+            _wave_col_start = _central_start + _gap
+            _wave_col_end = _wave_col_start + _col_w
+            _wave_cx = _wave_col_start + _col_w // 2
+            _wave_x_start = _wave_col_start
+
+            # Text column (right)
+            _text_col_start = _wave_col_end + _gap
+            _text_x = _text_col_start  # left-aligned in text column
+            _text_anchor = None  # left-aligned
+        else:
+            # Text on left column, wave on right
+            _text_col_start = _central_start + _gap
+            _text_x = _text_col_start + _col_w  # right-aligned at end of text column
+            _text_anchor = "right"
+
+            # Wave column (right)
+            _wave_col_start = _text_col_start + _col_w + _gap
+            _wave_cx = _wave_col_start + _col_w // 2
+            _wave_x_start = _wave_col_start
+
+        _wave_w = _col_w
+
+        # Text: vertically centred as a block
+        _block_h = 120 + 90 + 80 + 70  # title + artist + album + time heights approx
+        _text_y_title = HEIGHT // 2 - _block_h // 2
+        _text_y_artist = _text_y_title + 140
+        _text_y_album = _text_y_artist + 110
+        _text_y_time = _text_y_album + 100
+
+        # Seek bar: full-width below both columns
+        _margin = 160
+        _seek_h = 10
+        _seek_w = WIDTH - 2 * _margin
+        _seek_x = _margin
+        _seek_y = HEIGHT - 160
+
+        return dict(
+            wave_width=_wave_w,
+            wave_height=_wave_h,
+            wave_center_x=_wave_cx,
+            wave_center_y=_wave_cy,
+            wave_x_start=_wave_x_start,
+            seek_bar_x=_seek_x,
+            seek_bar_y=_seek_y,
+            seek_bar_w=_seek_w,
+            seek_bar_h=_seek_h,
+            text_x=_text_x,
+            text_y_title=_text_y_title,
+            text_y_artist=_text_y_artist,
+            text_y_album=_text_y_album,
+            text_y_time=_text_y_time,
+            text_max_width=_col_w,  # text must fit within its column
+            font_size_title=100,
+            font_size_artist=72,
+            font_size_album=60,
+            font_size_time=52,
+            text_anchor=_text_anchor,
+            wave_fade_width=140,
+            circular_radius=450,  # fits within column
+        )
+
+    # classic (default) — original layout
+    return dict(
+        wave_width=WAVE_WIDTH,
+        wave_height=WAVE_HEIGHT,
+        wave_center_x=WIDTH // 2,
+        wave_center_y=WAVE_CENTER_Y,
+        wave_x_start=WAVE_X_START,
+        seek_bar_x=SEEK_BAR_X,
+        seek_bar_y=SEEK_BAR_Y,
+        seek_bar_w=SEEK_BAR_W,
+        seek_bar_h=SEEK_BAR_H,
+        text_x=TEXT_X,
+        text_y_title=TEXT_Y_TITLE,
+        text_y_artist=TEXT_Y_ARTIST,
+        text_y_album=TEXT_Y_ALBUM,
+        text_y_time=TEXT_Y_TIME,
+        text_max_width=SEEK_BAR_W,  # text must fit within seek bar width
+        font_size_title=80,
+        font_size_artist=60,
+        font_size_album=50,
+        font_size_time=40,
+        text_anchor=None,
+        wave_fade_width=WAVE_FADE_WIDTH,
+        circular_radius=500,  # large circle for classic
+    )
+
 
 # Waveform smoothing
 SMOOTHING_WINDOW = 15  # spatial: moving-average window along the X axis of each frame
@@ -105,6 +293,7 @@ TEMPORAL_ALPHA = 0.35  # temporal EMA between consecutive frames
 # on each side, creating the illusion of an infinite waveform.
 WAVE_FADE_WIDTH = 180  # ~15% of WAVE_WIDTH (1200px)
 
+
 # Localisation — prefixes for artist and album fields
 LANG_PREFIXES: dict[str, dict[str, str]] = {
     "en": {"artist": "by ", "album": "from "},
@@ -112,13 +301,13 @@ LANG_PREFIXES: dict[str, dict[str, str]] = {
 }
 
 # Fade in / fade out
-FADE_DURATION = 2.0  # seconds for the full fade window at each end
+FADE_DURATION = 3.0  # seconds for the full fade window at each end
 # Staggered delays within the fade window (seconds after fade window starts)
-FADE_DELAY_WAVE = 0.3  # wave starts fading in after the background
-FADE_DELAY_UI = 0.6  # texts + seek start fading in after the background
+FADE_DELAY_WAVE = 0.5  # wave starts fading in after the background
+FADE_DELAY_UI = 1.0  # texts + seek start fading in after the background
 #
-# Fade-in order:  bg (0.0s) → wave (0.3s) → ui (0.6s)  — all finish at 2.0s
-# Fade-out order: ui (end-2.0s) → wave (end-1.7s) → bg (end-1.4s) — all finish at end
+# Fade-in order:  bg (0.0s) → wave (0.5s) → ui (1.0s)  — all finish at 3.0s
+# Fade-out order: ui (end-3.0s) → wave (end-2.5s) → bg (end-2.0s) — all finish at end
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +331,163 @@ def validate_hex_color(value: str) -> str:
         raise argparse.ArgumentTypeError(
             f"Invalid color '{value}'. Expected #RGB or #RRGGBB (e.g. #FFF or #FFFFFF)."
         )
-    return value
+    return value.lower()
+
+
+def validate_gradient_colors(value: str) -> str:
+    """argparse type= validator for gradient color strings (#color1,#color2,...)."""
+    colors = value.split(",")
+    if len(colors) < 2:
+        raise argparse.ArgumentTypeError(
+            f"Gradient requires at least 2 colors, got: '{value}'. "
+            "Format: #RRGGBB,#RRGGBB or #RRGGBB,#RRGGBB,#RRGGBB,..."
+        )
+    for color in colors:
+        color = color.strip()
+        h = color.lstrip("#")
+        if (
+            not color.startswith("#")
+            or len(h) not in (3, 6)
+            or not all(c in "0123456789abcdefABCDEF" for c in h)
+        ):
+            raise argparse.ArgumentTypeError(
+                f"Invalid gradient color '{color}'. Expected #RGB or #RRGGBB."
+            )
+    return value.lower()
+
+
+def parse_gradient_colors(color_str: str) -> list[tuple]:
+    """Parse gradient color string (#color1,#color2,#color3) into list of RGBA tuples."""
+    if not color_str:
+        return []
+
+    colors = color_str.split(",")
+    rgba_colors = []
+    for color in colors:
+        color = color.strip()
+        if not color.startswith("#"):
+            raise ValueError(f"Gradient color must start with #: {color}")
+        if len(color) not in [4, 7]:
+            raise ValueError(f"Gradient color must be #RGB or #RRGGBB: {color}")
+
+        # Convert to RGB tuple
+        if len(color) == 4:
+            r = int(color[1] * 2, 16)
+            g = int(color[2] * 2, 16)
+            b = int(color[3] * 2, 16)
+        else:
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+
+        rgba_colors.append((r, g, b, 255))
+
+    return rgba_colors
+
+
+def _lerp_color(c0: tuple, c1: tuple, t: float) -> tuple[int, int, int, int]:
+    """Linearly interpolate between two RGBA color tuples."""
+    return (
+        int(c0[0] + (c1[0] - c0[0]) * t),
+        int(c0[1] + (c1[1] - c0[1]) * t),
+        int(c0[2] + (c1[2] - c0[2]) * t),
+        int(c0[3] + (c1[3] - c0[3]) * t),
+    )
+
+
+def _make_gradient_image(
+    width: int,
+    height: int,
+    colors: list[tuple],
+    direction: str = "horizontal",
+) -> Image.Image:
+    """
+    Build an RGBA image filled with a linear gradient.
+
+    `colors`    — list of RGBA tuples (2 or more stops, evenly spaced).
+    `direction` — 'vertical' (top→bottom) or 'horizontal' (left→right).
+    """
+    img = Image.new("RGBA", (width, height))
+    draw = ImageDraw.Draw(img)
+    n = len(colors)
+    steps = height if direction == "vertical" else width
+
+    for i in range(steps):
+        t = i / max(steps - 1, 1)
+        if n == 1:
+            c = colors[0]
+        else:
+            seg_size = 1.0 / (n - 1)
+            idx = min(int(t / seg_size), n - 2)
+            t_local = (t - idx * seg_size) / seg_size
+            c = _lerp_color(colors[idx], colors[idx + 1], t_local)
+        if direction == "vertical":
+            draw.line([(0, i), (width, i)], fill=c)
+        else:
+            draw.line([(i, 0), (i, height)], fill=c)
+
+    return img
+
+
+def draw_gradient_text(
+    canvas: Image.Image,
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    x: int,
+    y: int,
+    gradient_colors: list[tuple],
+    anchor: str | None = None,
+    direction: str = "horizontal",
+) -> None:
+    """
+    Draw *text* onto *canvas* (RGBA) filled with a gradient.
+
+    The technique:
+      1. Render text in white on a transparent RGBA scratch image (gives us
+         the alpha mask of each glyph pixel).
+      2. Build a same-size gradient image.
+      3. Use the text mask's alpha channel to composite the gradient onto
+         the canvas — so only the glyph pixels show the gradient colours.
+
+    `gradient_colors` — list of RGBA tuples (at least 2).
+    `anchor`          — None (left), "center", or "right" (same semantics as PIL).
+    `direction`       — 'vertical' (top→bottom) or 'horizontal' (left→right).
+    """
+    if not gradient_colors:
+        return
+
+    # Measure rendered text so we know how big the scratch images need to be
+    bb = font.getbbox(text)
+    tw = int(bb[2] - bb[0])
+    th = int(bb[3] - bb[1])
+    if tw <= 0 or th <= 0:
+        return
+
+    # Compute top-left corner based on anchor
+    if anchor == "center":
+        tx = int(x - tw // 2)
+        ty = int(y - th // 2)
+    elif anchor == "right":
+        tx = int(x - tw)
+        ty = int(y)
+    else:
+        tx = int(x)
+        ty = int(y)
+
+    # 1. Render white text → get glyph alpha mask
+    text_img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+    text_draw = ImageDraw.Draw(text_img)
+    text_draw.text((-bb[0], -bb[1]), text, font=font, fill=(255, 255, 255, 255))
+
+    # 2. Build gradient image (same size as text bounding box)
+    grad_img = _make_gradient_image(tw, th, gradient_colors, direction=direction)
+
+    # 3. Use text alpha as mask so only glyph pixels show gradient colour
+    text_alpha = text_img.split()[3]  # L-mode mask
+    grad_img.putalpha(text_alpha)
+
+    # 4. Paste onto canvas
+    canvas.alpha_composite(grad_img, dest=(tx, ty))
 
 
 def read_id3_tags(audio_path: str) -> tuple[str, str, str]:
@@ -281,6 +626,38 @@ def format_time(seconds: float) -> str:
     return f"{m:02d}:{s:02d}"
 
 
+def fit_text(
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    max_width: int,
+    ellipsis: str = "\u2026",
+) -> str:
+    """Truncate *text* so it fits within *max_width* pixels when rendered with *font*.
+
+    If the text already fits, it is returned unchanged.  Otherwise characters
+    are removed from the end and the Unicode ellipsis character (U+2026) is
+    appended until the result fits.
+    """
+    bb = font.getbbox(text)
+    if int(bb[2] - bb[0]) <= max_width:
+        return text
+
+    # Binary search for the longest prefix that fits with ellipsis
+    lo, hi = 0, len(text) - 1
+    best = 0
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        candidate = text[:mid] + ellipsis
+        bb = font.getbbox(candidate)
+        if int(bb[2] - bb[0]) <= max_width:
+            best = mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+
+    return text[:best] + ellipsis if best > 0 else ellipsis
+
+
 # ---------------------------------------------------------------------------
 # Audio analysis
 # ---------------------------------------------------------------------------
@@ -291,6 +668,7 @@ def analyze_audio(
     fps: int,
     smoothing_window: int = SMOOTHING_WINDOW,
     temporal_alpha: float = TEMPORAL_ALPHA,
+    wave_width: int = WAVE_WIDTH,
 ) -> tuple[np.ndarray, float]:
     """
     Load audio and compute per-frame waveform samples.
@@ -319,7 +697,7 @@ def analyze_audio(
     if window_samples % 2 == 0:
         window_samples += 1
 
-    n_columns = WAVE_WIDTH  # one waveform point per horizontal pixel
+    n_columns = wave_width  # one waveform point per horizontal pixel
 
     print(f"Duration: {duration:.1f}s  |  Frames: {n_frames}  |  SR: {sr} Hz")
 
@@ -385,17 +763,175 @@ def prepare_background(image_path: str) -> Image.Image:
     top = (new_h - HEIGHT) // 2
     bg = bg.crop((left, top, left + WIDTH, top + HEIGHT))
 
-    # Darken overlay
-    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, BG_DARKEN_ALPHA))
-    bg = bg.convert("RGBA")
-    bg = Image.alpha_composite(bg, overlay).convert("RGB")
-
     return bg
+
+
+# ---------------------------------------------------------------------------
+# Waveform drawing helpers
+# ---------------------------------------------------------------------------
+
+
+def draw_wave_line(
+    wave_draw: ImageDraw.ImageDraw,
+    samples: np.ndarray,
+    lc: dict,
+    wave_color: tuple,
+    wave_fill: tuple,
+    centre_color: tuple,
+    wave_gradient_colors: list[tuple] | None = None,
+) -> None:
+    """Draw the classic mirrored-line waveform."""
+    n_cols = len(samples)
+    w_width = lc["wave_width"]
+    w_height = lc["wave_height"]
+    w_x_start = lc["wave_x_start"]
+    w_cy = lc["wave_center_y"]
+
+    xs = np.linspace(w_x_start, w_x_start + w_width, n_cols, dtype=int)
+    amplitudes = np.clip(samples, -1.0, 1.0)
+
+    peak = np.percentile(np.abs(amplitudes), 99)
+    if peak > 0:
+        amplitudes = amplitudes / peak * 0.80
+
+    ys = (amplitudes * w_height).astype(int)
+
+    poly_top = [(xs[i], w_cy - ys[i]) for i in range(n_cols)]
+    poly_bot = [(xs[i], w_cy + ys[i]) for i in range(n_cols - 1, -1, -1)]
+    wave_draw.polygon(poly_top + poly_bot, fill=wave_fill)
+
+    top_points = [(xs[i], w_cy - ys[i]) for i in range(n_cols)]
+    bot_points = [(xs[i], w_cy + ys[i]) for i in range(n_cols)]
+    if len(top_points) > 1:
+        wave_draw.line(top_points, fill=wave_color, width=3)
+        wave_draw.line(bot_points, fill=wave_color, width=3)
+
+
+def draw_wave_circular(
+    wave_draw: ImageDraw.ImageDraw,
+    samples: np.ndarray,
+    lc: dict,
+    wave_color: tuple,
+    wave_fill: tuple,
+    centre_color: tuple,
+    wave_gradient_colors: list[tuple] | None = None,
+) -> None:
+    """
+    Draw a radial/circular waveform — bars project outward from a ring.
+    When wave_gradient_colors is provided, each bar is coloured according to
+    its angular position around the circle (colour cycles through the stops).
+    """
+    cx = lc["wave_center_x"]
+    cy = lc["wave_center_y"]
+    max_radius = lc.get("circular_radius", 400)
+    inner_r = max_radius * 0.35
+    max_bar = max_radius * 0.55
+
+    n_bars = min(len(samples), 240)
+
+    indices = np.linspace(0, len(samples) - 1, n_bars, dtype=int)
+    bar_amps = np.abs(np.clip(samples[indices], -1.0, 1.0))
+
+    peak = np.percentile(bar_amps, 99)
+    if peak > 0:
+        bar_amps = bar_amps / peak * 0.90
+
+    # Draw subtle inner circle
+    r_int = int(inner_r)
+    wave_draw.ellipse(
+        [cx - r_int, cy - r_int, cx + r_int, cy + r_int],
+        outline=centre_color,
+        width=2,
+    )
+
+    base_r, base_g, base_b, base_alpha = wave_color
+
+    for i in range(n_bars):
+        angle = 2.0 * np.pi * i / n_bars - np.pi / 2
+        amp = float(bar_amps[i])
+        bar_len = max_bar * amp + 8
+
+        # If gradient: pick bar colour by angular position
+        if wave_gradient_colors and len(wave_gradient_colors) >= 2:
+            t_bar = i / n_bars
+            seg_size = 1.0 / (len(wave_gradient_colors) - 1)
+            idx = min(int(t_bar / seg_size), len(wave_gradient_colors) - 2)
+            t_local = (t_bar - idx * seg_size) / seg_size
+            c0 = wave_gradient_colors[idx]
+            c1 = wave_gradient_colors[idx + 1]
+            bar_r = int(c0[0] + (c1[0] - c0[0]) * t_local)
+            bar_g = int(c0[1] + (c1[1] - c0[1]) * t_local)
+            bar_b = int(c0[2] + (c1[2] - c0[2]) * t_local)
+        else:
+            bar_r, bar_g, bar_b = base_r, base_g, base_b
+
+        n_segments = max(4, int(bar_len / 6))
+        for seg in range(n_segments):
+            seg_start = inner_r + (bar_len * seg / n_segments)
+            seg_end = inner_r + (bar_len * (seg + 1) / n_segments)
+
+            x1 = cx + np.cos(angle) * seg_start
+            y1 = cy + np.sin(angle) * seg_start
+            x2 = cx + np.cos(angle) * seg_end
+            y2 = cy + np.sin(angle) * seg_end
+
+            t = seg / n_segments
+            gradient_factor = 1.0 - t * 0.5
+            amp_factor = 0.6 + 0.4 * amp
+            seg_alpha = int(base_alpha * gradient_factor * amp_factor)
+            seg_col = (bar_r, bar_g, bar_b, seg_alpha)
+
+            wave_draw.line(
+                [(int(x1), int(y1)), (int(x2), int(y2))],
+                fill=seg_col,
+                width=5,
+            )
+
+        # Dot at tip
+        x_outer = cx + np.cos(angle) * (inner_r + bar_len)
+        y_outer = cy + np.sin(angle) * (inner_r + bar_len)
+        dot_alpha = int(base_alpha * 0.7 * amp)
+        dot_col = (bar_r, bar_g, bar_b, dot_alpha)
+        dot_r = 4
+        ix, iy = int(x_outer), int(y_outer)
+        wave_draw.ellipse(
+            [ix - dot_r, iy - dot_r, ix + dot_r, iy + dot_r],
+            fill=dot_col,
+        )
 
 
 # ---------------------------------------------------------------------------
 # Frame rendering
 # ---------------------------------------------------------------------------
+
+
+def apply_grain(img: Image.Image, intensity: float, frame_idx: int) -> Image.Image:
+    """
+    Overlay film-grain noise on *img* (RGB).
+
+    Each frame uses a different random seed so the grain animates naturally.
+    The noise is centred at 128 and blended additively:
+
+        output = clip(pixel + noise - 128, 0, 255)
+
+    At intensity=0.0 the image is unchanged; at intensity=1.0 the noise
+    amplitude spans ±128 (full range).
+
+    `intensity` — float in [0.0, 1.0].
+    `frame_idx` — used as RNG seed so every frame has unique grain.
+    """
+    if intensity <= 0.0:
+        return img
+
+    rng = np.random.default_rng(frame_idx)
+    arr = np.array(img, dtype=np.int16)
+
+    # Noise amplitude: 0 → 0 px, 1.0 → ±128 px
+    amplitude = int(round(intensity * 128))
+    noise = rng.integers(-amplitude, amplitude + 1, size=arr.shape, dtype=np.int16)
+
+    arr = np.clip(arr + noise, 0, 255).astype(np.uint8)
+    return Image.fromarray(arr, "RGB")
 
 
 def render_frame(
@@ -412,12 +948,21 @@ def render_frame(
     font_artist: ImageFont.FreeTypeFont,
     font_album: ImageFont.FreeTypeFont,
     font_time: ImageFont.FreeTypeFont,
+    layout_config: dict | None = None,
+    wave_style: str = "line",
+    text_gradient_colors: list[tuple] | None = None,
+    wave_gradient_colors: list[tuple] | None = None,
+    text_gradient_dir: str = "horizontal",
+    wave_gradient_dir: str = "horizontal",
+    grain: float = 0.0,
 ) -> Image.Image:
+    # Use classic layout if none provided (backwards compat)
+    lc = layout_config if layout_config is not None else get_layout_config("classic")
+
     # ---- Fade alphas -------------------------------------------------------
     alpha_bg, alpha_wave, alpha_ui = compute_fade_alphas(frame_idx, n_frames, FPS)
 
     # ---- Background with fade ---------------------------------------------
-    # Composite the background over a pure black canvas using alpha_bg.
     black = Image.new("RGB", (WIDTH, HEIGHT), (0, 0, 0))
     if alpha_bg >= 1.0:
         frame = bg.copy().convert("RGBA")
@@ -428,7 +973,6 @@ def render_frame(
     wave_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     wave_draw = ImageDraw.Draw(wave_layer, "RGBA")
 
-    # Scale all wave alphas by alpha_wave
     def wa(base: int) -> int:
         return int(base * alpha_wave)
 
@@ -436,47 +980,95 @@ def render_frame(
     wave_fill = hex_to_rgba(color, wa(50))
     centre_color = hex_to_rgba(color, wa(40))
 
-    n_cols = len(samples)
-    xs = np.linspace(WAVE_X_START, WAVE_X_START + WAVE_WIDTH, n_cols, dtype=int)
-    amplitudes = np.clip(samples, -1.0, 1.0)
-
-    peak = np.percentile(np.abs(amplitudes), 99)
-    if peak > 0:
-        amplitudes = amplitudes / peak * 0.80
-
-    ys = (amplitudes * WAVE_HEIGHT).astype(int)
-
-    poly_top = [(xs[i], WAVE_CENTER_Y - ys[i]) for i in range(n_cols)]
-    poly_bot = [(xs[i], WAVE_CENTER_Y + ys[i]) for i in range(n_cols - 1, -1, -1)]
-    wave_draw.polygon(poly_top + poly_bot, fill=wave_fill)
-
-    top_points = [(xs[i], WAVE_CENTER_Y - ys[i]) for i in range(n_cols)]
-    bot_points = [(xs[i], WAVE_CENTER_Y + ys[i]) for i in range(n_cols)]
-    if len(top_points) > 1:
-        wave_draw.line(top_points, fill=wave_color, width=3)
-        wave_draw.line(bot_points, fill=wave_color, width=3)
-
-    wave_draw.line(
-        [(WAVE_X_START, WAVE_CENTER_Y), (WAVE_X_START + WAVE_WIDTH, WAVE_CENTER_Y)],
-        fill=centre_color,
-        width=1,
-    )
+    # Draw waveform with selected style
+    if wave_style == "circular":
+        draw_wave_circular(
+            wave_draw,
+            samples,
+            lc,
+            wave_color,
+            wave_fill,
+            centre_color,
+            wave_gradient_colors,
+        )
+    else:
+        draw_wave_line(
+            wave_draw,
+            samples,
+            lc,
+            wave_color,
+            wave_fill,
+            centre_color,
+            wave_gradient_colors,
+        )
 
     # Edge fade (horizontal gradient → infinite-wave illusion)
-    wave_arr = np.array(wave_layer, dtype=np.float32)
-    fade = np.ones(WIDTH, dtype=np.float32)
-    x0, x1 = WAVE_X_START, WAVE_X_START + WAVE_WIDTH
-    fade[x0 : x0 + WAVE_FADE_WIDTH] = np.linspace(0.0, 1.0, WAVE_FADE_WIDTH)
-    fade[x1 - WAVE_FADE_WIDTH : x1] = np.linspace(1.0, 0.0, WAVE_FADE_WIDTH)
-    fade[:x0] = 0.0
-    fade[x1:] = 0.0
-    wave_arr[:, :, 3] *= fade[np.newaxis, :]
-    wave_layer = Image.fromarray(np.clip(wave_arr, 0, 255).astype(np.uint8), "RGBA")
+    # Only apply for line style; circular doesn't need it
+    if wave_style == "line":
+        wave_arr = np.array(wave_layer, dtype=np.float32)
+
+        # Apply wave colour gradient if requested
+        if wave_gradient_colors and len(wave_gradient_colors) >= 2:
+            n = len(wave_gradient_colors)
+            if wave_gradient_dir == "horizontal":
+                w = wave_arr.shape[1]
+                for col in range(w):
+                    t = col / max(w - 1, 1)
+                    seg_size = 1.0 / (n - 1)
+                    idx = min(int(t / seg_size), n - 2)
+                    t_local = (t - idx * seg_size) / seg_size
+                    c0 = wave_gradient_colors[idx]
+                    c1 = wave_gradient_colors[idx + 1]
+                    cr = c0[0] + (c1[0] - c0[0]) * t_local
+                    cg = c0[1] + (c1[1] - c0[1]) * t_local
+                    cb = c0[2] + (c1[2] - c0[2]) * t_local
+                    existing_alpha = wave_arr[:, col, 3]
+                    wave_arr[:, col, 0] = np.where(
+                        existing_alpha > 0, cr, wave_arr[:, col, 0]
+                    )
+                    wave_arr[:, col, 1] = np.where(
+                        existing_alpha > 0, cg, wave_arr[:, col, 1]
+                    )
+                    wave_arr[:, col, 2] = np.where(
+                        existing_alpha > 0, cb, wave_arr[:, col, 2]
+                    )
+            else:  # vertical (default)
+                h = wave_arr.shape[0]
+                for row in range(h):
+                    t = row / max(h - 1, 1)
+                    seg_size = 1.0 / (n - 1)
+                    idx = min(int(t / seg_size), n - 2)
+                    t_local = (t - idx * seg_size) / seg_size
+                    c0 = wave_gradient_colors[idx]
+                    c1 = wave_gradient_colors[idx + 1]
+                    cr = c0[0] + (c1[0] - c0[0]) * t_local
+                    cg = c0[1] + (c1[1] - c0[1]) * t_local
+                    cb = c0[2] + (c1[2] - c0[2]) * t_local
+                    existing_alpha = wave_arr[row, :, 3]
+                    wave_arr[row, :, 0] = np.where(
+                        existing_alpha > 0, cr, wave_arr[row, :, 0]
+                    )
+                    wave_arr[row, :, 1] = np.where(
+                        existing_alpha > 0, cg, wave_arr[row, :, 1]
+                    )
+                    wave_arr[row, :, 2] = np.where(
+                        existing_alpha > 0, cb, wave_arr[row, :, 2]
+                    )
+
+        fade = np.ones(WIDTH, dtype=np.float32)
+        x0 = lc["wave_x_start"]
+        x1 = x0 + lc["wave_width"]
+        fw = lc["wave_fade_width"]
+        fade[x0 : x0 + fw] = np.linspace(0.0, 1.0, fw)
+        fade[x1 - fw : x1] = np.linspace(1.0, 0.0, fw)
+        fade[:x0] = 0.0
+        fade[x1:] = 0.0
+        wave_arr[:, :, 3] *= fade[np.newaxis, :]
+        wave_layer = Image.fromarray(np.clip(wave_arr, 0, 255).astype(np.uint8), "RGBA")
 
     frame = Image.alpha_composite(frame, wave_layer)
 
     # ---- UI layer (seek bar + text) ---------------------------------------
-    # Drawn onto a separate transparent layer so alpha_ui applies cleanly.
     ui_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(ui_layer, "RGBA")
 
@@ -484,27 +1076,31 @@ def render_frame(
         return int(base * alpha_ui)
 
     text_color = hex_to_rgba(color, ua(255))
-    shadow_color = (0, 0, 0, ua(160))
     seek_bg_color = hex_to_rgba(color, ua(50))
     seek_fg_color = hex_to_rgba(color, ua(220))
     dot_color = hex_to_rgba(color, ua(255))
 
     # Seek bar
+    sb_x = lc["seek_bar_x"]
+    sb_y = lc["seek_bar_y"]
+    sb_w = lc["seek_bar_w"]
+    sb_h = lc["seek_bar_h"]
+
     progress = frame_idx / max(n_frames - 1, 1)
-    filled_w = int(SEEK_BAR_W * progress)
+    filled_w = int(sb_w * progress)
 
     draw.rectangle(
-        [SEEK_BAR_X, SEEK_BAR_Y, SEEK_BAR_X + SEEK_BAR_W, SEEK_BAR_Y + SEEK_BAR_H],
+        [sb_x, sb_y, sb_x + sb_w, sb_y + sb_h],
         fill=seek_bg_color,
     )
     if filled_w > 0:
         draw.rectangle(
-            [SEEK_BAR_X, SEEK_BAR_Y, SEEK_BAR_X + filled_w, SEEK_BAR_Y + SEEK_BAR_H],
+            [sb_x, sb_y, sb_x + filled_w, sb_y + sb_h],
             fill=seek_fg_color,
         )
-    dot_r = 10
-    dot_x = SEEK_BAR_X + filled_w
-    dot_y = SEEK_BAR_Y + SEEK_BAR_H // 2
+    dot_r = max(10, sb_h)  # dot radius scales with seek bar height
+    dot_x = sb_x + filled_w
+    dot_y = sb_y + sb_h // 2
     draw.ellipse(
         [dot_x - dot_r, dot_y - dot_r, dot_x + dot_r, dot_y + dot_r],
         fill=dot_color,
@@ -513,23 +1109,77 @@ def render_frame(
     # Time label
     elapsed = frame_idx / FPS
     time_str = f"{format_time(elapsed)} / {format_time(duration)}"
-    draw.text(
-        (TEXT_X + 2, TEXT_Y_TIME + 2), time_str, font=font_time, fill=shadow_color
-    )
-    draw.text((TEXT_X, TEXT_Y_TIME), time_str, font=font_time, fill=text_color)
 
-    # Track info
+    tx = lc["text_x"]
+    anchor = lc["text_anchor"]
+
+    # Build fade-adjusted gradient colours (or fall back to flat text_color)
+    faded_grad: list[tuple] | None = None
+    if text_gradient_colors:
+        faded_grad = [(c[0], c[1], c[2], ua(c[3])) for c in text_gradient_colors]
+
+    if faded_grad:
+        draw_gradient_text(
+            ui_layer,
+            time_str,
+            font_time,
+            tx,
+            lc["text_y_time"],
+            faded_grad,
+            anchor,
+            direction=text_gradient_dir,
+        )
+    elif anchor == "center":
+        draw.text(
+            (tx, lc["text_y_time"]),
+            time_str,
+            font=font_time,
+            fill=text_color,
+            anchor="mt",
+        )
+    elif anchor == "right":
+        draw.text(
+            (tx, lc["text_y_time"]),
+            time_str,
+            font=font_time,
+            fill=text_color,
+            anchor="rt",
+        )
+    else:
+        draw.text((tx, lc["text_y_time"]), time_str, font=font_time, fill=text_color)
+
+    # Track info — truncate text that exceeds the available width
+    max_w = lc["text_max_width"]
     for text, font, y in [
-        (title, font_title, TEXT_Y_TITLE),
-        (artist, font_artist, TEXT_Y_ARTIST),
-        (album, font_album, TEXT_Y_ALBUM),
+        (fit_text(title, font_title, max_w), font_title, lc["text_y_title"]),
+        (fit_text(artist, font_artist, max_w), font_artist, lc["text_y_artist"]),
+        (fit_text(album, font_album, max_w), font_album, lc["text_y_album"]),
     ]:
-        draw.text((TEXT_X + 2, y + 2), text, font=font, fill=shadow_color)
-        draw.text((TEXT_X, y), text, font=font, fill=text_color)
+        if faded_grad:
+            draw_gradient_text(
+                ui_layer,
+                text,
+                font,
+                tx,
+                y,
+                faded_grad,
+                anchor,
+                direction=text_gradient_dir,
+            )
+        elif anchor == "center":
+            draw.text((tx, y), text, font=font, fill=text_color, anchor="mt")
+        elif anchor == "right":
+            draw.text((tx, y), text, font=font, fill=text_color, anchor="rt")
+        else:
+            draw.text((tx, y), text, font=font, fill=text_color)
 
     frame = Image.alpha_composite(frame, ui_layer)
+    result = frame.convert("RGB")
 
-    return frame.convert("RGB")
+    if grain > 0.0:
+        result = apply_grain(result, grain, frame_idx)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -545,6 +1195,8 @@ def render_cover(
     color: str,
     font_path: str | None = None,
     font_bold_path: str | None = None,
+    text_gradient_colors: list[tuple] | None = None,
+    text_gradient_dir: str = "horizontal",
 ) -> Image.Image:
     """
     Render a 4K cover image: same background, text centred and larger.
@@ -552,18 +1204,24 @@ def render_cover(
         title  (bold, 160px)
         artist (regular, 120px)
         album  (regular, 96px)
-    A subtle horizontal divider is drawn between the title and artist.
     """
     font_title = load_font_bold(160, font_bold_path)
     font_artist = load_font_regular(120, font_path)
     font_album = load_font_regular(96, font_path)
 
+    # Maximum text width: canvas minus comfortable margins on each side
+    _cover_margin = 200
+    _cover_max_w = WIDTH - 2 * _cover_margin
+
+    # Truncate texts that would exceed the available width
+    title = fit_text(title, font_title, _cover_max_w)
+    artist = fit_text(artist, font_artist, _cover_max_w)
+    album = fit_text(album, font_album, _cover_max_w)
+
     cover = bg.copy().convert("RGBA")
     draw = ImageDraw.Draw(cover, "RGBA")
 
     text_color = hex_to_rgba(color, 255)
-    shadow_color = (0, 0, 0, 180)
-    div_color = hex_to_rgba(color, 80)
 
     cx = WIDTH // 2  # horizontal centre
 
@@ -576,42 +1234,47 @@ def render_cover(
     aw, ah = text_size(artist, font_artist)
     lw, lh = text_size(album, font_album)
 
-    GAP_TITLE_DIV = 40  # px between title bottom and divider
-    DIV_HEIGHT = 4
-    DIV_WIDTH = max(tw, aw, lw) + 160
-    GAP_DIV_ARTIST = 40  # px between divider bottom and artist top
-    GAP_ARTIST_ALBUM = 32  # px between artist bottom and album top
+    GAP_TITLE_ARTIST = 80  # px between title bottom and artist top
+    GAP_ARTIST_ALBUM = 60  # px between artist bottom and album top
 
-    block_h = (
-        th + GAP_TITLE_DIV + DIV_HEIGHT + GAP_DIV_ARTIST + ah + GAP_ARTIST_ALBUM + lh
-    )
+    block_h = th + GAP_TITLE_ARTIST + ah + GAP_ARTIST_ALBUM + lh
 
     # Centre the whole block vertically
     y = (HEIGHT - block_h) // 2
 
-    def draw_text_centred(text: str, font: ImageFont.FreeTypeFont, y_top: int) -> None:
-        w, _ = text_size(text, font)
-        x = cx - w // 2
-        draw.text((x + 2, y_top + 2), text, font=font, fill=shadow_color)
-        draw.text((x, y_top), text, font=font, fill=text_color)
+    if text_gradient_colors:
+        # Full-opacity gradient colours for cover
+        for txt, font, y_pos in [
+            (title, font_title, y),
+            (artist, font_artist, y + th + GAP_TITLE_ARTIST),
+            (album, font_album, y + th + GAP_TITLE_ARTIST + ah + GAP_ARTIST_ALBUM),
+        ]:
+            w, _ = text_size(txt, font)
+            x = cx - w // 2
+            draw_gradient_text(
+                cover,
+                txt,
+                font,
+                x,
+                y_pos,
+                text_gradient_colors,
+                anchor=None,
+                direction=text_gradient_dir,
+            )
+    else:
 
-    # Title
-    draw_text_centred(title, font_title, y)
-    y += th + GAP_TITLE_DIV
+        def draw_text_centred(
+            text: str, font: ImageFont.FreeTypeFont, y_top: int
+        ) -> None:
+            w, _ = text_size(text, font)
+            x = cx - w // 2
+            draw.text((x, y_top), text, font=font, fill=text_color)
 
-    # Divider
-    draw.rectangle(
-        [cx - DIV_WIDTH // 2, y, cx + DIV_WIDTH // 2, y + DIV_HEIGHT],
-        fill=div_color,
-    )
-    y += DIV_HEIGHT + GAP_DIV_ARTIST
-
-    # Artist
-    draw_text_centred(artist, font_artist, y)
-    y += ah + GAP_ARTIST_ALBUM
-
-    # Album
-    draw_text_centred(album, font_album, y)
+        draw_text_centred(title, font_title, y)
+        y += th + GAP_TITLE_ARTIST
+        draw_text_centred(artist, font_artist, y)
+        y += ah + GAP_ARTIST_ALBUM
+        draw_text_centred(album, font_album, y)
 
     return cover.convert("RGB")
 
@@ -640,15 +1303,24 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         color,
         font_path,
         font_bold_path,
+        layout_name,
+        wave_style,
+        text_gradient_colors,
+        wave_gradient_colors,
+        text_gradient_dir,
+        wave_gradient_dir,
+        grain,
     ) = args_tuple
 
     samples = np.frombuffer(samples_bytes, dtype=np.float32).copy()
     bg = Image.frombytes("RGB", bg_size, bg_bytes)
 
-    font_title = load_font_bold(64, font_bold_path)
-    font_artist = load_font_regular(48, font_path)
-    font_album = load_font_regular(40, font_path)
-    font_time = load_font_regular(32, font_path)
+    lc = get_layout_config(layout_name)
+
+    font_title = load_font_bold(lc["font_size_title"], font_bold_path)
+    font_artist = load_font_regular(lc["font_size_artist"], font_path)
+    font_album = load_font_regular(lc["font_size_album"], font_path)
+    font_time = load_font_regular(lc["font_size_time"], font_path)
 
     img = render_frame(
         bg=bg,
@@ -664,6 +1336,13 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         font_artist=font_artist,
         font_album=font_album,
         font_time=font_time,
+        layout_config=lc,
+        wave_style=wave_style,
+        text_gradient_colors=text_gradient_colors,
+        wave_gradient_colors=wave_gradient_colors,
+        text_gradient_dir=text_gradient_dir,
+        wave_gradient_dir=wave_gradient_dir,
+        grain=grain,
     )
     return frame_idx, img.tobytes()  # raw RGB24
 
@@ -733,6 +1412,13 @@ def render_and_encode(
     workers: int = 1,
     font_path: str | None = None,
     font_bold_path: str | None = None,
+    layout: str = "classic",
+    wave_style: str = "line",
+    text_gradient_colors: list[tuple] | None = None,
+    wave_gradient_colors: list[tuple] | None = None,
+    text_gradient_dir: str = "horizontal",
+    wave_gradient_dir: str = "horizontal",
+    grain: float = 0.0,
 ) -> None:
     """
     Render all frames in parallel and stream raw RGB24 directly into FFmpeg
@@ -831,6 +1517,13 @@ def render_and_encode(
             color,
             font_path,
             font_bold_path,
+            layout,
+            wave_style,
+            text_gradient_colors,
+            wave_gradient_colors,
+            text_gradient_dir,
+            wave_gradient_dir,
+            grain,
         )
         for i in range(n_frames)
     ]
@@ -925,6 +1618,15 @@ Examples:
     parser.add_argument(
         "--background", required=True, help="Path to the background image."
     )
+    parser.add_argument(
+        "--cover-background",
+        default=None,
+        dest="cover_background",
+        help=(
+            "Path to a separate background image for the cover JPG. "
+            "If omitted, the same background as the video is used."
+        ),
+    )
     parser.add_argument("--title", default=None, help="Song title (single-file mode).")
     parser.add_argument(
         "--artist", default=None, help="Artist name (single-file mode)."
@@ -986,6 +1688,85 @@ Examples:
         ),
     )
     parser.add_argument(
+        "--layout",
+        choices=["classic", "spotlight", "split-left", "split-right"],
+        default="classic",
+        help=(
+            "Visual layout for the video. "
+            "'classic' = original layout (default); "
+            "'spotlight' = large centred text, big seek bar above, waves below; "
+            "'split-left' = waves on the left, text on the right, full-width seek below; "
+            "'split-right' = text on the left, waves on the right, full-width seek below."
+        ),
+    )
+    parser.add_argument(
+        "--wave-style",
+        choices=["line", "circular"],
+        default="line",
+        dest="wave_style",
+        help=(
+            "Waveform drawing style. "
+            "'line' = mirrored waveform lines (default); "
+            "'circular' = radial/circular waveform (bars projected from a circle)."
+        ),
+    )
+    parser.add_argument(
+        "--text-gradient",
+        default=None,
+        dest="text_gradient",
+        type=validate_gradient_colors,
+        help=(
+            "Comma-separated hex colors for a vertical gradient applied to all text. "
+            "Overrides --color for text elements when provided. "
+            "Example: '#FF0000,#0000FF' or '#FF0000,#FFFFFF,#0000FF'."
+        ),
+    )
+    parser.add_argument(
+        "--wave-gradient",
+        default=None,
+        dest="wave_gradient",
+        type=validate_gradient_colors,
+        help=(
+            "Comma-separated hex colors for a gradient applied to the waveform. "
+            "Overrides --color for the waveform when provided. "
+            "For 'line' style: vertical gradient (top→bottom). "
+            "For 'circular' style: angular gradient (bars cycle through colors). "
+            "Example: '#FF0000,#0000FF' or '#FF0000,#FFFFFF,#0000FF'."
+        ),
+    )
+    parser.add_argument(
+        "--text-gradient-dir",
+        choices=["vertical", "horizontal"],
+        default="horizontal",
+        dest="text_gradient_dir",
+        help=(
+            "Direction of the text gradient. "
+            "'horizontal' = left→right (default); 'vertical' = top→bottom."
+        ),
+    )
+    parser.add_argument(
+        "--wave-gradient-dir",
+        choices=["vertical", "horizontal"],
+        default="horizontal",
+        dest="wave_gradient_dir",
+        help=(
+            "Direction of the waveform gradient (line style only). "
+            "'horizontal' = left→right (default); 'vertical' = top→bottom."
+        ),
+    )
+    parser.add_argument(
+        "--grain",
+        type=float,
+        default=0.0,
+        help=(
+            "Film-grain intensity applied on top of every frame. "
+            "Range 0.0–1.0 (default: 0.0 = disabled). "
+            "Noise is frame-animated and blended as a neutral overlay "
+            "(values below 128 darken, above 128 lighten). "
+            "Suggested range: 0.05–0.20 for a subtle analogue feel."
+        ),
+    )
+    parser.add_argument(
         "--smoothing-window",
         type=int,
         default=SMOOTHING_WINDOW,
@@ -1037,11 +1818,15 @@ def process_file(
     display_artist = f"{prefixes['artist']}{artist}" if artist else artist
     display_album = f"{prefixes['album']}{album}" if album else album
 
+    # Resolve layout geometry so analyze_audio uses the correct wave_width
+    lc = get_layout_config(args.layout)
+
     frames_samples, duration = analyze_audio(
         audio_path,
         FPS,
         smoothing_window=args.smoothing_window,
         temporal_alpha=args.temporal_alpha,
+        wave_width=lc["wave_width"],
     )
     n_frames = len(frames_samples)
 
@@ -1052,6 +1837,14 @@ def process_file(
         f"Rendering {n_frames} frames with {args.workers} workers → piping to FFmpeg "
         f"({args.gpu if args.gpu != 'none' else 'libx264 CPU'})..."
     )
+
+    text_gradient_colors = (
+        parse_gradient_colors(args.text_gradient) if args.text_gradient else None
+    )
+    wave_gradient_colors = (
+        parse_gradient_colors(args.wave_gradient) if args.wave_gradient else None
+    )
+
     render_and_encode(
         frames_samples=frames_samples,
         bg=bg,
@@ -1068,18 +1861,34 @@ def process_file(
         workers=args.workers,
         font_path=args.font,
         font_bold_path=args.font_bold,
+        layout=args.layout,
+        wave_style=args.wave_style,
+        text_gradient_colors=text_gradient_colors,
+        wave_gradient_colors=wave_gradient_colors,
+        text_gradient_dir=args.text_gradient_dir,
+        wave_gradient_dir=args.wave_gradient_dir,
+        grain=args.grain,
     )
 
     cover_path = str(Path(output_path).with_suffix(".jpg"))
     print("Generating cover image...")
+
+    # Use separate background for cover if provided
+    if args.cover_background:
+        cover_bg = prepare_background(args.cover_background)
+    else:
+        cover_bg = bg
+
     cover = render_cover(
-        bg=bg,
+        bg=cover_bg,
         title=title,
         artist=display_artist,
         album=display_album,
         color=args.color,
         font_path=args.font,
         font_bold_path=args.font_bold,
+        text_gradient_colors=text_gradient_colors,
+        text_gradient_dir=args.text_gradient_dir,
     )
     cover.save(cover_path, "JPEG", quality=95, subsampling=0)
     print(f"Cover saved: {cover_path}")
