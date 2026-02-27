@@ -1,12 +1,12 @@
 import sys
 from pathlib import Path
 from PIL import Image
-from config.constants import FPS, LANG_PREFIXES
-from cli import parse_args
-from audio import analyze_audio, read_id3_tags
-from utils import prepare_background
-from render import render_cover
-from encoding import render_and_encode
+from .config.constants import FPS, LANG_PREFIXES
+from .cli import parse_args
+from .audio import analyze_audio, read_id3_tags
+from .utils import prepare_background
+from .render import render_cover
+from .encoding import render_and_encode
 
 
 def process_file(

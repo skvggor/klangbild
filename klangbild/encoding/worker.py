@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
-from render.frame import render_frame
-from utils.fonts import load_font_bold, load_font_regular
+from ..render.frame import render_frame
+from ..utils.fonts import load_font_bold, load_font_regular
 
 
 def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:

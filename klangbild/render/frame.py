@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from config.constants import (
+from ..config.constants import (
     WIDTH,
     HEIGHT,
     FPS,
@@ -19,8 +19,8 @@ from config.constants import (
     TEXT_Y_ALBUM,
     WAVE_FADE_WIDTH,
 )
-from utils.colors import hex_to_rgba
-from utils.time import compute_fade_alphas, format_time
+from ..utils.colors import hex_to_rgba
+from ..utils.time import compute_fade_alphas, format_time
 
 
 def render_frame(

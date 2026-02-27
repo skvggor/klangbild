@@ -51,7 +51,7 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 ### Basic
 
 ```bash
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" \
     --background "cover.jpg" \
     --title "Song Title" \
@@ -63,7 +63,7 @@ uv run python __main__.py \
 ### With Custom Font
 
 ```bash
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" \
     --background "cover.jpg" \
     --title "Song Title" \
@@ -77,7 +77,7 @@ uv run python __main__.py \
 ### With Gradients
 
 ```bash
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" \
     --background "cover.jpg" \
     --layout spotlight \
@@ -90,7 +90,7 @@ uv run python __main__.py \
 ### With Film Grain
 
 ```bash
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" \
     --background "cover.jpg" \
     --grain 0.15 \
@@ -100,7 +100,7 @@ uv run python __main__.py \
 ### With Portuguese Language
 
 ```bash
-uv run python __main__.py \
+uv run klangbild \
     --audio "musica.mp3" \
     --background "capa.jpg" \
     --title "Título da Música" \
@@ -113,7 +113,7 @@ uv run python __main__.py \
 ### Full Example
 
 ```bash
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" \
     --background "cover.jpg" \
     --title "Тыл — фронту" \
@@ -134,7 +134,7 @@ uv run python __main__.py \
 ### Batch Mode
 
 ```bash
-uv run python __main__.py \
+uv run klangbild \
     --input-dir "/path/to/mp3s" \
     --background "cover.jpg" \
     --font "Montserrat-Regular.ttf" \
@@ -201,23 +201,23 @@ Both text and waveform support independent color gradients. Each flag accepts tw
 
 ```bash
 # Text gradient only
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" --background "cover.jpg" \
     --text-gradient "#FF8C42,#FF5A5F"
 
 # Waveform gradient only
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" --background "cover.jpg" \
     --wave-gradient "#FFD700,#FF6B6B"
 
 # Both combined, vertical direction
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" --background "cover.jpg" \
     --text-gradient "#FF8C42,#FF5A5F" --text-gradient-dir vertical \
     --wave-gradient "#FFD700,#FF6B6B" --wave-gradient-dir vertical
 
 # Three-stop gradient
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" --background "cover.jpg" \
     --text-gradient "#FF0000,#FFFFFF,#0000FF"
 ```
@@ -287,12 +287,12 @@ The `--grain` flag overlays animated film grain on every frame. The value is a f
 
 ```bash
 # Subtle grain
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" --background "cover.jpg" \
     --grain 0.08
 
 # Noticeable grain
-uv run python __main__.py \
+uv run klangbild \
     --audio "song.mp3" --background "cover.jpg" \
     --grain 0.25
 ```

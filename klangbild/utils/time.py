@@ -1,5 +1,5 @@
 import numpy as np
-from config.constants import FADE_DURATION, FADE_DELAY_WAVE, FADE_DELAY_UI, FPS
+from ..config.constants import FADE_DURATION, FADE_DELAY_WAVE, FADE_DELAY_UI, FPS
 
 
 def format_time(seconds: float) -> str:

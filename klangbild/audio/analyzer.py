@@ -1,7 +1,7 @@
 import numpy as np
 import librosa
 from tqdm import tqdm
-from config.constants import SMOOTHING_WINDOW, TEMPORAL_ALPHA, WAVE_WIDTH, FPS
+from ..config.constants import SMOOTHING_WINDOW, TEMPORAL_ALPHA, WAVE_WIDTH, FPS
 
 
 def moving_average(arr: np.ndarray, w: int) -> np.ndarray:

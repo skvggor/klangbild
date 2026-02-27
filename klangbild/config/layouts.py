@@ -1,4 +1,4 @@
-from config.constants import *
+from .constants import *
 
 
 def get_layout_config(layout: str) -> dict:
