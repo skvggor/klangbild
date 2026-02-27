@@ -19,60 +19,129 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 ## Examples
 
-### Example 1: Classic + Line
+### Covers
 
-| Video frame | Cover image |
-|:-----------:|:-----------:|
-| ![Video frame](assets/example1_frame.jpg) | ![Cover](assets/example1_cover.jpg) |
+![Cover](assets/cover_main.jpg)
 
-*Enkelmåte — "Enkelmåte" from Hvis Havet Ikke Hører Meg*
+*SKVGGOR — "Мемориал Героям-панфиловцам"*
 
-### Example 2: Split-left + Circular
+---
 
-| Video frame | Cover image |
-|:-----------:|:-----------:|
-| ![Video frame](assets/example2_frame.jpg) | ![Cover](assets/example2_cover.jpg) |
+### Layouts
 
-*SKVGGOR — "Jah Old Beat" from Random*
+| Layout | Line Wave | Circular Wave |
+|--------|:---------:|:-------------:|
+| **Classic** | ![classic line](assets/classic_line_warm.jpg) | ![classic circular](assets/classic_circular_warm.jpg) |
+| **Spotlight** | ![spotlight line](assets/spotlight_line_neutral.jpg) | ![spotlight circular](assets/spotlight_circular_neutral.jpg) |
+| **Split Left** | ![split-left line](assets/split-left_line_contrast.jpg) | ![split-left circular](assets/split-left_circular_contrast.jpg) |
+| **Split Right** | ![split-right line](assets/split-right_line_warm.jpg) | ![split-right circular](assets/split-right_circular_warm.jpg) |
 
-### Example 3: Classic + Line + Warm Gradient + Grain
+---
 
-```bash
-uv run python visualizer.py \
-    --audio "song.mp3" --background "cover.jpg" \
-    --layout classic --wave-style line \
-    --text-gradient "#C8860A,#E4DBC9" \
-    --wave-gradient "#C8860A,#E4DBC9" \
-    --grain 0.1
-```
+### Film Grain
 
-![combo warm grain](assets/combo_warm_grain.jpg)
+| Low (0.08) | Medium (0.15) | High (0.25) |
+|:----------:|:-------------:|:-----------:|
+| ![grain low](assets/grain_low.jpg) | ![grain medium](assets/grain_medium.jpg) | ![grain high](assets/grain_high.jpg) |
 
-### Example 4: Spotlight + Circular + Cool Gradient + Grain
+---
 
-```bash
-uv run python visualizer.py \
-    --audio "song.mp3" --background "cover.jpg" \
-    --layout spotlight --wave-style circular \
-    --text-gradient "#7B9BAF,#B8A8C8" \
-    --wave-gradient "#7B9BAF,#B8A8C8" \
-    --grain 0.2
-```
+## Usage
 
-![combo cool grain](assets/combo_cool_grain.jpg)
-
-### Example 5: Split-right + Line + Pastel Gradient + Grain
+### Basic
 
 ```bash
 uv run python visualizer.py \
-    --audio "song.mp3" --background "cover.jpg" \
-    --layout split-right --wave-style line \
-    --text-gradient "#D4A8A0,#A8C8B8" \
-    --wave-gradient "#D4A8A0,#A8C8B8" \
-    --grain 0.15
+    --audio "song.mp3" \
+    --background "cover.jpg" \
+    --title "Song Title" \
+    --artist "Artist Name" \
+    --album "Album Name" \
+    --output "visualizer.mp4"
 ```
 
-![combo pastel grain](assets/combo_pastel_grain.jpg)
+### With Custom Font
+
+```bash
+uv run python visualizer.py \
+    --audio "song.mp3" \
+    --background "cover.jpg" \
+    --title "Song Title" \
+    --artist "Artist Name" \
+    --album "Album Name" \
+    --font "Montserrat-Regular.ttf" \
+    --font-bold "Montserrat-Black.ttf" \
+    --output "visualizer.mp4"
+```
+
+### With Gradients
+
+```bash
+uv run python visualizer.py \
+    --audio "song.mp3" \
+    --background "cover.jpg" \
+    --layout spotlight \
+    --wave-style circular \
+    --text-gradient "#FF8C42,#FF5A5F" \
+    --wave-gradient "#FF5A5F,#FF8C42" \
+    --output "visualizer.mp4"
+```
+
+### With Film Grain
+
+```bash
+uv run python visualizer.py \
+    --audio "song.mp3" \
+    --background "cover.jpg" \
+    --grain 0.15 \
+    --output "visualizer.mp4"
+```
+
+### With Portuguese Language
+
+```bash
+uv run python visualizer.py \
+    --audio "musica.mp3" \
+    --background "capa.jpg" \
+    --title "Título da Música" \
+    --artist "Nome do Artista" \
+    --album "Nome do Álbum" \
+    --lang pt \
+    --output "visualizer.mp4"
+```
+
+### Full Example
+
+```bash
+uv run python visualizer.py \
+    --audio "song.mp3" \
+    --background "cover.jpg" \
+    --title "Тыл — фронту" \
+    --artist "SKVGGOR" \
+    --album "Productive Laziness (2026)" \
+    --layout spotlight \
+    --wave-style circular \
+    --text-gradient "#FFD700,#FF6B6B" \
+    --wave-gradient "#FF6B6B,#FFD700" \
+    --grain 0.1 \
+    --font "Montserrat-Regular.ttf" \
+    --font-bold "Montserrat-Black.ttf" \
+    --gpu nvenc \
+    --workers 30 \
+    --output "visualizer.mp4"
+```
+
+### Batch Mode
+
+```bash
+uv run python visualizer.py \
+    --input-dir "/path/to/mp3s" \
+    --background "cover.jpg" \
+    --font "Montserrat-Regular.ttf" \
+    --font-bold "Montserrat-Black.ttf" \
+    --gpu nvenc \
+    --workers 30
+```
 
 ---
 
@@ -93,40 +162,6 @@ git clone https://github.com/skvggor/klangbild.git
 cd klangbild
 uv sync
 ```
-
----
-
-## Usage
-
-### Single file
-
-```bash
-uv run python visualizer.py \
-    --audio    "song.mp3" \
-    --background "cover.jpg" \
-    --title    "Song Title" \
-    --artist   "Artist Name" \
-    --album    "Album Name" \
-    --color    "#FFFFFF" \
-    --output   "visualizer.mp4"
-```
-
-`--title`, `--artist`, `--album` are optional (fall back to filename / empty string).
-
-### Batch mode
-
-Process every MP3 in a folder. Title, artist and album are read from each file's ID3 tags automatically.
-
-```bash
-uv run python visualizer.py \
-    --input-dir "/path/to/mp3s" \
-    --background "cover.jpg" \
-    --color     "#FFFFFF" \
-    --gpu       nvenc \
-    --workers   30
-```
-
-Each MP3 produces a `.mp4` and `.jpg` in the same folder.
 
 ---
 
@@ -168,18 +203,18 @@ Both text and waveform support independent color gradients. Each flag accepts tw
 # Text gradient only
 uv run python visualizer.py \
     --audio "song.mp3" --background "cover.jpg" \
-    --text-gradient "#C8860A,#E4DBC9"
+    --text-gradient "#FF8C42,#FF5A5F"
 
 # Waveform gradient only
 uv run python visualizer.py \
     --audio "song.mp3" --background "cover.jpg" \
-    --wave-gradient "#7B9BAF,#B8A8C8"
+    --wave-gradient "#FFD700,#FF6B6B"
 
 # Both combined, vertical direction
 uv run python visualizer.py \
     --audio "song.mp3" --background "cover.jpg" \
-    --text-gradient "#C8860A,#E4DBC9" --text-gradient-dir vertical \
-    --wave-gradient "#7B9BAF,#B8A8C8" --wave-gradient-dir vertical
+    --text-gradient "#FF8C42,#FF5A5F" --text-gradient-dir vertical \
+    --wave-gradient "#FFD700,#FF6B6B" --wave-gradient-dir vertical
 
 # Three-stop gradient
 uv run python visualizer.py \
@@ -197,16 +232,6 @@ When `--text-gradient` is provided it overrides `--color` for all text elements.
 | `vertical` | top → bottom across each glyph | top → bottom across the wave |
 
 For the `circular` waveform style the gradient direction flag is ignored — colors cycle angularly around the ring instead.
-
-### Gradient examples
-
-| Name | Colors | Preview |
-|------|--------|---------|
-| Warm | `#C8860A → #E4DBC9` | ![warm](assets/gradient_quente.jpg) |
-| Cool | `#7B9BAF → #B8A8C8` | ![cool](assets/gradient_frio.jpg) |
-| High contrast | `#FFFFFF → #AAAAAA` | ![contrast](assets/gradient_contraste.jpg) |
-| Monochrome | `#C8B89A → #F5EFE0` | ![mono](assets/gradient_monocromo.jpg) |
-| Pastel | `#D4A8A0 → #A8C8B8` | ![pastel](assets/gradient_pastel.jpg) |
 
 ---
 
@@ -264,7 +289,7 @@ The `--grain` flag overlays animated film grain on every frame. The value is a f
 # Subtle grain
 uv run python visualizer.py \
     --audio "song.mp3" --background "cover.jpg" \
-    --grain 0.1
+    --grain 0.08
 
 # Noticeable grain
 uv run python visualizer.py \
@@ -273,15 +298,6 @@ uv run python visualizer.py \
 ```
 
 Each frame uses a unique random seed so the grain animates naturally without repeating patterns.
-
-### Grain examples
-
-| Intensity | Preview |
-|-----------|---------|
-| `0.0` — off | ![grain off](assets/grain_00.jpg) |
-| `0.1` — subtle | ![grain 0.1](assets/grain_01.jpg) |
-| `0.25` — noticeable | ![grain 0.25](assets/grain_025.jpg) |
-| `0.15`, circular layout | ![grain circular](assets/grain_circular.jpg) |
 
 ---
 
