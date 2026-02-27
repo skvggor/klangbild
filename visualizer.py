@@ -46,6 +46,20 @@ Wave style options for --wave-style:
     line      Mirrored waveform lines (default)
     circular  Radial/circular waveform (bars projected from a circle)
 
+Gradient options (at least 2 comma-separated #RGB or #RRGGBB colors):
+    --text-gradient "#FF0000,#0000FF"
+        Vertical gradient applied to all text (title, artist, album, time).
+        Overrides --color for text when provided.
+
+    --wave-gradient "#FF0000,#0000FF"
+        Gradient applied to the waveform.
+        line style:     vertical gradient (top → bottom)
+        circular style: angular gradient (bars cycle through colors)
+        Overrides --color for the waveform when provided.
+
+    Both flags are independent and can be combined:
+        --text-gradient "#FF0000,#FFFFFF,#0000FF" --wave-gradient "#00FF00,#FF00FF"
+
 --workers:        parallel CPU workers for frame rendering (default: cpu_count - 2)
 --font:           .ttf/.otf for regular text (artist, album, time)
 --font-bold:      .ttf/.otf for bold text (title)
