@@ -12,7 +12,7 @@ def parse_args() -> argparse.Namespace:
         epilog="""
 Examples:
   # Single-file, CPU (default) — outputs visualizer.mp4 + visualizer.jpg (cover)
-  python visualizer.py \\
+  python __main__.py \\
       --audio my_song.mp3 \\
       --background cover.jpg \\
       --title "My Song" \\
@@ -22,16 +22,16 @@ Examples:
       --output visualizer.mp4
 
   # Custom fonts
-  python visualizer.py --audio ... --font regular.ttf --font-bold bold.ttf --output visualizer.mp4
+  python __main__.py --audio ... --font regular.ttf --font-bold bold.ttf --output visualizer.mp4
 
   # NVIDIA GPU encoding + all 30 workers
-  python visualizer.py --audio ... --gpu nvenc --workers 30 --output visualizer.mp4
+  python __main__.py --audio ... --gpu nvenc --workers 30 --output visualizer.mp4
 
   # Intel/AMD GPU
-  python visualizer.py --audio ... --gpu vaapi --output visualizer.mp4
+  python __main__.py --audio ... --gpu vaapi --output visualizer.mp4
 
   # Batch mode — process all MP3s in a folder (reads ID3 tags automatically)
-  python visualizer.py \\
+  python __main__.py \\
       --input-dir /path/to/mp3s \\
       --background cover.jpg \\
       --color "#FFFFFF" \\
