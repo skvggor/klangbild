@@ -46,7 +46,7 @@ uv sync
 ### Single file
 
 ```bash
-uv run python visualizer.py \
+uv run python __main__.py \
     --audio    "song.mp3" \
     --background "cover.jpg" \
     --title    "Song Title" \
@@ -63,7 +63,7 @@ uv run python visualizer.py \
 Process every MP3 in a folder. Title, artist and album are read from each file's ID3 tags automatically.
 
 ```bash
-uv run python visualizer.py \
+uv run python __main__.py \
     --input-dir "/path/to/mp3s" \
     --background "cover.jpg" \
     --color     "#FFFFFF" \
