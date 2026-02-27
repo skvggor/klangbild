@@ -1,9 +1,30 @@
 <p align="center">
   <img src="assets/icon.svg" alt="klangbild icon" width="120" height="120"/><br/>
- <h1 align="center">klangbild</h1>
+  <h1 align="center">klangbild</h1>
 </p>
 
 Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (JPG) from any MP3 file.
+
+---
+
+## Table of Contents
+
+1. [Features](#features)
+2. [Requirements](#requirements)
+3. [Installation](#installation)
+4. [Usage](#usage)
+5. [Options](#options)
+6. [Resources](#resources)
+   - [Layouts](#layouts)
+   - [Wave Styles](#wave-styles)
+   - [Gradients](#gradients)
+   - [Film Grain](#film-grain)
+7. [Examples](#examples)
+8. [Output](#output)
+
+---
+
+## Features
 
 - Multiple layout options: classic, spotlight, split-left, split-right
 - Two waveform styles: mirrored lines or radial/circular
@@ -17,32 +38,23 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 ---
 
-## Examples
+## Requirements
 
-### Covers
-
-![Cover](assets/cover_main.jpg)
-
-*SKVGGOR — "Мемориал Героям-панфиловцам"*
-
----
-
-### Layouts
-
-| Layout | Line Wave | Circular Wave |
-|--------|:---------:|:-------------:|
-| **Classic** | ![classic line](assets/classic_line_warm.jpg) | ![classic circular](assets/classic_circular_warm.jpg) |
-| **Spotlight** | ![spotlight line](assets/spotlight_line_neutral.jpg) | ![spotlight circular](assets/spotlight_circular_neutral.jpg) |
-| **Split Left** | ![split-left line](assets/split-left_line_contrast.jpg) | ![split-left circular](assets/split-left_circular_contrast.jpg) |
-| **Split Right** | ![split-right line](assets/split-right_line_warm.jpg) | ![split-right circular](assets/split-right_circular_warm.jpg) |
+- Python ≥ 3.11
+- [uv](https://github.com/astral-sh/uv) (package manager)
+- FFmpeg ≥ 5 (must be in `$PATH`)
+- For NVIDIA GPU encoding: NVENC-capable driver
+- For Intel/AMD GPU encoding: Mesa VA-API
 
 ---
 
-### Film Grain
+## Installation
 
-| Low (0.08) | Medium (0.15) | High (0.25) |
-|:----------:|:-------------:|:-----------:|
-| ![grain low](assets/grain_low.jpg) | ![grain medium](assets/grain_medium.jpg) | ![grain high](assets/grain_high.jpg) |
+```bash
+git clone https://github.com/skvggor/klangbild.git
+cd klangbild
+uv sync
+```
 
 ---
 
@@ -145,26 +157,6 @@ uv run klangbild \
 
 ---
 
-## Requirements
-
-- Python ≥ 3.11
-- [uv](https://github.com/astral-sh/uv) (package manager)
-- FFmpeg ≥ 5 (must be in `$PATH`)
-- For NVIDIA GPU encoding: NVENC-capable driver
-- For Intel/AMD GPU encoding: Mesa VA-API
-
----
-
-## Installation
-
-```bash
-git clone https://github.com/skvggor/klangbild.git
-cd klangbild
-uv sync
-```
-
----
-
 ## Options
 
 | Flag | Default | Description |
@@ -195,7 +187,51 @@ uv sync
 
 ---
 
-## Gradients
+## Resources
+
+### Layouts
+
+The `--layout` flag controls how elements are positioned on the 3840×2160 canvas.
+
+| Layout | Description |
+|--------|-------------|
+| `classic` | Original layout. Waveform centred, text stacked below, seek bar at bottom. |
+| `spotlight` | Large centred text with generous margins. Seek bar above text, waveform below. |
+| `split-left` | Two-column layout. Waveform on the left, text on the right, full-width seek bar at bottom. |
+| `split-right` | Two-column layout. Text on the left, waveform on the right, full-width seek bar at bottom. |
+
+Reference layout images are included in `assets/`:
+
+| Spec file | Description |
+|-----------|-------------|
+| `spec_classic_line.png` | classic + line waveform |
+| `spec_classic_circular.png` | classic + circular waveform |
+| `spec_spotlight_line.png` | spotlight + line waveform |
+| `spec_spotlight_circular.png` | spotlight + circular waveform |
+| `spec_split-left_line.png` | split-left + line waveform |
+| `spec_split-left_circular.png` | split-left + circular waveform |
+| `spec_split-right_line.png` | split-right + line waveform |
+| `spec_split-right_circular.png` | split-right + circular waveform |
+| `spec_cover.png` | cover image layout |
+
+Each spec shows:
+- Waveform area (blue for line, orange for circular)
+- Text area (green)
+- Seek bar (yellow)
+- Dimensions and positions
+
+### Wave Styles
+
+The `--wave-style` flag controls how the waveform is drawn.
+
+| Style | Description |
+|-------|-------------|
+| `line` | Classic mirrored waveform lines with fill. |
+| `circular` | Radial waveform — bars project outward from a central ring. |
+
+Both styles react to the audio in real-time. The circular style works best with spotlight layout.
+
+### Gradients
 
 Both text and waveform support independent color gradients. Each flag accepts two or more `#RGB` or `#RRGGBB` values separated by commas.
 
@@ -233,55 +269,7 @@ When `--text-gradient` is provided it overrides `--color` for all text elements.
 
 For the `circular` waveform style the gradient direction flag is ignored — colors cycle angularly around the ring instead.
 
----
-
-## Layouts
-
-The `--layout` flag controls how elements are positioned on the 3840×2160 canvas.
-
-| Layout | Description |
-|--------|-------------|
-| `classic` | Original layout. Waveform centred, text stacked below, seek bar at bottom. |
-| `spotlight` | Large centred text with generous margins. Seek bar above text, waveform below. |
-| `split-left` | Two-column layout. Waveform on the left, text on the right, full-width seek bar at bottom. |
-| `split-right` | Two-column layout. Text on the left, waveform on the right, full-width seek bar at bottom. |
-
-Reference layout images are included in `assets/`:
-
-| Spec file | Description |
-|-----------|-------------|
-| `spec_classic_line.png` | classic + line waveform |
-| `spec_classic_circular.png` | classic + circular waveform |
-| `spec_spotlight_line.png` | spotlight + line waveform |
-| `spec_spotlight_circular.png` | spotlight + circular waveform |
-| `spec_split-left_line.png` | split-left + line waveform |
-| `spec_split-left_circular.png` | split-left + circular waveform |
-| `spec_split-right_line.png` | split-right + line waveform |
-| `spec_split-right_circular.png` | split-right + circular waveform |
-| `spec_cover.png` | cover image layout |
-
-Each spec shows:
-- Waveform area (blue for line, orange for circular)
-- Text area (green)
-- Seek bar (yellow)
-- Dimensions and positions
-
----
-
-## Wave Styles
-
-The `--wave-style` flag controls how the waveform is drawn.
-
-| Style | Description |
-|-------|-------------|
-| `line` | Classic mirrored waveform lines with fill. |
-| `circular` | Radial waveform — bars project outward from a central ring. |
-
-Both styles react to the audio in real-time. The circular style works best with spotlight layout.
-
----
-
-## Film Grain
+### Film Grain
 
 The `--grain` flag overlays animated film grain on every frame. The value is a float between `0.0` (no grain) and `1.0` (heavy grain). At `0.0` the effect is completely skipped with no performance cost.
 
@@ -298,6 +286,35 @@ uv run klangbild \
 ```
 
 Each frame uses a unique random seed so the grain animates naturally without repeating patterns.
+
+---
+
+## Examples
+
+### Covers
+
+![Cover](assets/cover_main.jpg)
+
+*SKVGGOR — "Мемориал Героям-панфиловцам"*
+
+---
+
+### Layouts
+
+| Layout | Line Wave | Circular Wave |
+|--------|:---------:|:-------------:|
+| **Classic** | ![classic line](assets/classic_line_warm.jpg) | ![classic circular](assets/classic_circular_warm.jpg) |
+| **Spotlight** | ![spotlight line](assets/spotlight_line_neutral.jpg) | ![spotlight circular](assets/spotlight_circular_neutral.jpg) |
+| **Split Left** | ![split-left line](assets/split-left_line_contrast.jpg) | ![split-left circular](assets/split-left_circular_contrast.jpg) |
+| **Split Right** | ![split-right line](assets/split-right_line_warm.jpg) | ![split-right circular](assets/split-right_circular_warm.jpg) |
+
+---
+
+### Film Grain
+
+| Low (0.08) | Medium (0.15) | High (0.25) |
+|:----------:|:-------------:|:-----------:|
+| ![grain low](assets/grain_low.jpg) | ![grain medium](assets/grain_medium.jpg) | ![grain high](assets/grain_high.jpg) |
 
 ---
 
