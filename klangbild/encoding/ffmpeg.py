@@ -9,8 +9,8 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
-from config.constants import WIDTH, HEIGHT
-from encoding.worker import _render_worker
+from ..config.constants import WIDTH, HEIGHT
+from .worker import _render_worker
 
 
 def _build_video_codec_args(gpu: str) -> list[str]:

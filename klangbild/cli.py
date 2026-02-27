@@ -1,8 +1,8 @@
 import argparse
 import multiprocessing as mp
 
-from config.constants import SMOOTHING_WINDOW, TEMPORAL_ALPHA, FPS
-from utils.colors import validate_hex_color
+from .config.constants import SMOOTHING_WINDOW, TEMPORAL_ALPHA, FPS
+from .utils.colors import validate_hex_color
 
 
 def parse_args() -> argparse.Namespace:

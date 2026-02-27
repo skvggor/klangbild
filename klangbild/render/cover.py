@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
-from config.constants import WIDTH, HEIGHT
-from utils.colors import hex_to_rgba
-from utils.fonts import load_font_bold, load_font_regular
+from ..config.constants import WIDTH, HEIGHT
+from ..utils.colors import hex_to_rgba
+from ..utils.fonts import load_font_bold, load_font_regular
 
 
 def render_cover(

@@ -1,5 +1,5 @@
 from PIL import Image
-from config.constants import WIDTH, HEIGHT, BG_DARKEN_ALPHA
+from ..config.constants import WIDTH, HEIGHT, BG_DARKEN_ALPHA
 
 
 def prepare_background(image_path: str) -> Image.Image:
