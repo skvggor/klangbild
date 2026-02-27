@@ -20,7 +20,8 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
    - [Wave Styles](#wave-styles)
    - [Gradients](#gradients)
    - [Film Grain](#film-grain)
-8. [Output](#output)
+ 8. [Output](#output)
+ 9. [License](#license)
 
 ---
 
@@ -322,3 +323,9 @@ Each frame uses a unique random seed so the grain animates naturally without rep
 
 - `<output>.mp4` — 3840×2160 (4K), 30 fps, H.264, AAC 320 kbps
 - `<output>.jpg` — 4K cover image with centered text
+
+---
+
+## License
+
+[GNU General Public License v3.0](LICENSE)
