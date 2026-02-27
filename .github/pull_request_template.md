@@ -2,12 +2,19 @@
 
 <!-- Describe your changes -->
 
+## Type of change
+
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactoring
+- [ ] Documentation update
+- [ ] Other
+
 ## Checklist
 
-- [ ] Tests pass
-- [ ] Lint/typecheck pass
-- [ ] Documentation updated (if needed)
+- [ ] Code works as expected
+- [ ] Changes are documented (if needed)
 
-## Screenshots (if applicable)
+## Screenshots / Output (if applicable)
 
-<!-- Add screenshots of visual changes -->
+<!-- Add screenshots or example output -->
