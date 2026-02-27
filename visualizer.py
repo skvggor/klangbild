@@ -167,6 +167,7 @@ def get_layout_config(layout: str) -> dict:
             text_y_artist=_text_y_artist,
             text_y_album=_text_y_album,
             text_y_time=_text_y_time,
+            text_max_width=_seek_w,  # text must fit within seek bar width
             font_size_title=120,
             font_size_artist=80,
             font_size_album=64,
@@ -177,9 +178,9 @@ def get_layout_config(layout: str) -> dict:
         )
 
     if layout in ("split-left", "split-right"):
-        # Two-column layout within a 2500px central area
+        # Two-column layout within a 3200px central area
         # Structure: gap | coluna | gap | coluna | gap
-        _central_area = 2500
+        _central_area = 3200
         _gap = 80  # gap between columns and edges
         # Each column = (central_area - 3 * gap) / 2
         _col_w = (_central_area - 3 * _gap) // 2
@@ -243,6 +244,7 @@ def get_layout_config(layout: str) -> dict:
             text_y_artist=_text_y_artist,
             text_y_album=_text_y_album,
             text_y_time=_text_y_time,
+            text_max_width=_col_w,  # text must fit within its column
             font_size_title=100,
             font_size_artist=72,
             font_size_album=60,
@@ -268,6 +270,7 @@ def get_layout_config(layout: str) -> dict:
         text_y_artist=TEXT_Y_ARTIST,
         text_y_album=TEXT_Y_ALBUM,
         text_y_time=TEXT_Y_TIME,
+        text_max_width=SEEK_BAR_W,  # text must fit within seek bar width
         font_size_title=80,
         font_size_artist=60,
         font_size_album=50,
@@ -328,7 +331,163 @@ def validate_hex_color(value: str) -> str:
         raise argparse.ArgumentTypeError(
             f"Invalid color '{value}'. Expected #RGB or #RRGGBB (e.g. #FFF or #FFFFFF)."
         )
-    return value
+    return value.lower()
+
+
+def validate_gradient_colors(value: str) -> str:
+    """argparse type= validator for gradient color strings (#color1,#color2,...)."""
+    colors = value.split(",")
+    if len(colors) < 2:
+        raise argparse.ArgumentTypeError(
+            f"Gradient requires at least 2 colors, got: '{value}'. "
+            "Format: #RRGGBB,#RRGGBB or #RRGGBB,#RRGGBB,#RRGGBB,..."
+        )
+    for color in colors:
+        color = color.strip()
+        h = color.lstrip("#")
+        if (
+            not color.startswith("#")
+            or len(h) not in (3, 6)
+            or not all(c in "0123456789abcdefABCDEF" for c in h)
+        ):
+            raise argparse.ArgumentTypeError(
+                f"Invalid gradient color '{color}'. Expected #RGB or #RRGGBB."
+            )
+    return value.lower()
+
+
+def parse_gradient_colors(color_str: str) -> list[tuple]:
+    """Parse gradient color string (#color1,#color2,#color3) into list of RGBA tuples."""
+    if not color_str:
+        return []
+
+    colors = color_str.split(",")
+    rgba_colors = []
+    for color in colors:
+        color = color.strip()
+        if not color.startswith("#"):
+            raise ValueError(f"Gradient color must start with #: {color}")
+        if len(color) not in [4, 7]:
+            raise ValueError(f"Gradient color must be #RGB or #RRGGBB: {color}")
+
+        # Convert to RGB tuple
+        if len(color) == 4:
+            r = int(color[1] * 2, 16)
+            g = int(color[2] * 2, 16)
+            b = int(color[3] * 2, 16)
+        else:
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+
+        rgba_colors.append((r, g, b, 255))
+
+    return rgba_colors
+
+
+def _lerp_color(c0: tuple, c1: tuple, t: float) -> tuple[int, int, int, int]:
+    """Linearly interpolate between two RGBA color tuples."""
+    return (
+        int(c0[0] + (c1[0] - c0[0]) * t),
+        int(c0[1] + (c1[1] - c0[1]) * t),
+        int(c0[2] + (c1[2] - c0[2]) * t),
+        int(c0[3] + (c1[3] - c0[3]) * t),
+    )
+
+
+def _make_gradient_image(
+    width: int,
+    height: int,
+    colors: list[tuple],
+    direction: str = "horizontal",
+) -> Image.Image:
+    """
+    Build an RGBA image filled with a linear gradient.
+
+    `colors`    — list of RGBA tuples (2 or more stops, evenly spaced).
+    `direction` — 'vertical' (top→bottom) or 'horizontal' (left→right).
+    """
+    img = Image.new("RGBA", (width, height))
+    draw = ImageDraw.Draw(img)
+    n = len(colors)
+    steps = height if direction == "vertical" else width
+
+    for i in range(steps):
+        t = i / max(steps - 1, 1)
+        if n == 1:
+            c = colors[0]
+        else:
+            seg_size = 1.0 / (n - 1)
+            idx = min(int(t / seg_size), n - 2)
+            t_local = (t - idx * seg_size) / seg_size
+            c = _lerp_color(colors[idx], colors[idx + 1], t_local)
+        if direction == "vertical":
+            draw.line([(0, i), (width, i)], fill=c)
+        else:
+            draw.line([(i, 0), (i, height)], fill=c)
+
+    return img
+
+
+def draw_gradient_text(
+    canvas: Image.Image,
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    x: int,
+    y: int,
+    gradient_colors: list[tuple],
+    anchor: str | None = None,
+    direction: str = "horizontal",
+) -> None:
+    """
+    Draw *text* onto *canvas* (RGBA) filled with a gradient.
+
+    The technique:
+      1. Render text in white on a transparent RGBA scratch image (gives us
+         the alpha mask of each glyph pixel).
+      2. Build a same-size gradient image.
+      3. Use the text mask's alpha channel to composite the gradient onto
+         the canvas — so only the glyph pixels show the gradient colours.
+
+    `gradient_colors` — list of RGBA tuples (at least 2).
+    `anchor`          — None (left), "center", or "right" (same semantics as PIL).
+    `direction`       — 'vertical' (top→bottom) or 'horizontal' (left→right).
+    """
+    if not gradient_colors:
+        return
+
+    # Measure rendered text so we know how big the scratch images need to be
+    bb = font.getbbox(text)
+    tw = int(bb[2] - bb[0])
+    th = int(bb[3] - bb[1])
+    if tw <= 0 or th <= 0:
+        return
+
+    # Compute top-left corner based on anchor
+    if anchor == "center":
+        tx = int(x - tw // 2)
+        ty = int(y - th // 2)
+    elif anchor == "right":
+        tx = int(x - tw)
+        ty = int(y)
+    else:
+        tx = int(x)
+        ty = int(y)
+
+    # 1. Render white text → get glyph alpha mask
+    text_img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+    text_draw = ImageDraw.Draw(text_img)
+    text_draw.text((-bb[0], -bb[1]), text, font=font, fill=(255, 255, 255, 255))
+
+    # 2. Build gradient image (same size as text bounding box)
+    grad_img = _make_gradient_image(tw, th, gradient_colors, direction=direction)
+
+    # 3. Use text alpha as mask so only glyph pixels show gradient colour
+    text_alpha = text_img.split()[3]  # L-mode mask
+    grad_img.putalpha(text_alpha)
+
+    # 4. Paste onto canvas
+    canvas.alpha_composite(grad_img, dest=(tx, ty))
 
 
 def read_id3_tags(audio_path: str) -> tuple[str, str, str]:
@@ -467,6 +626,38 @@ def format_time(seconds: float) -> str:
     return f"{m:02d}:{s:02d}"
 
 
+def fit_text(
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    max_width: int,
+    ellipsis: str = "\u2026",
+) -> str:
+    """Truncate *text* so it fits within *max_width* pixels when rendered with *font*.
+
+    If the text already fits, it is returned unchanged.  Otherwise characters
+    are removed from the end and the Unicode ellipsis character (U+2026) is
+    appended until the result fits.
+    """
+    bb = font.getbbox(text)
+    if int(bb[2] - bb[0]) <= max_width:
+        return text
+
+    # Binary search for the longest prefix that fits with ellipsis
+    lo, hi = 0, len(text) - 1
+    best = 0
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        candidate = text[:mid] + ellipsis
+        bb = font.getbbox(candidate)
+        if int(bb[2] - bb[0]) <= max_width:
+            best = mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+
+    return text[:best] + ellipsis if best > 0 else ellipsis
+
+
 # ---------------------------------------------------------------------------
 # Audio analysis
 # ---------------------------------------------------------------------------
@@ -587,6 +778,7 @@ def draw_wave_line(
     wave_color: tuple,
     wave_fill: tuple,
     centre_color: tuple,
+    wave_gradient_colors: list[tuple] | None = None,
 ) -> None:
     """Draw the classic mirrored-line waveform."""
     n_cols = len(samples)
@@ -622,10 +814,12 @@ def draw_wave_circular(
     wave_color: tuple,
     wave_fill: tuple,
     centre_color: tuple,
+    wave_gradient_colors: list[tuple] | None = None,
 ) -> None:
     """
     Draw a radial/circular waveform — bars project outward from a ring.
-    Gradient effect: brighter/more opaque near the inner ring, fading outward.
+    When wave_gradient_colors is provided, each bar is coloured according to
+    its angular position around the circle (colour cycles through the stops).
     """
     cx = lc["wave_center_x"]
     cy = lc["wave_center_y"]
@@ -657,6 +851,20 @@ def draw_wave_circular(
         amp = float(bar_amps[i])
         bar_len = max_bar * amp + 8
 
+        # If gradient: pick bar colour by angular position
+        if wave_gradient_colors and len(wave_gradient_colors) >= 2:
+            t_bar = i / n_bars
+            seg_size = 1.0 / (len(wave_gradient_colors) - 1)
+            idx = min(int(t_bar / seg_size), len(wave_gradient_colors) - 2)
+            t_local = (t_bar - idx * seg_size) / seg_size
+            c0 = wave_gradient_colors[idx]
+            c1 = wave_gradient_colors[idx + 1]
+            bar_r = int(c0[0] + (c1[0] - c0[0]) * t_local)
+            bar_g = int(c0[1] + (c1[1] - c0[1]) * t_local)
+            bar_b = int(c0[2] + (c1[2] - c0[2]) * t_local)
+        else:
+            bar_r, bar_g, bar_b = base_r, base_g, base_b
+
         n_segments = max(4, int(bar_len / 6))
         for seg in range(n_segments):
             seg_start = inner_r + (bar_len * seg / n_segments)
@@ -667,13 +875,11 @@ def draw_wave_circular(
             x2 = cx + np.cos(angle) * seg_end
             y2 = cy + np.sin(angle) * seg_end
 
-            # Gradient: high alpha at inner ring, lower at outer
-            # Also respect the base_alpha from fade
             t = seg / n_segments
             gradient_factor = 1.0 - t * 0.5
             amp_factor = 0.6 + 0.4 * amp
             seg_alpha = int(base_alpha * gradient_factor * amp_factor)
-            seg_col = (base_r, base_g, base_b, seg_alpha)
+            seg_col = (bar_r, bar_g, bar_b, seg_alpha)
 
             wave_draw.line(
                 [(int(x1), int(y1)), (int(x2), int(y2))],
@@ -685,7 +891,7 @@ def draw_wave_circular(
         x_outer = cx + np.cos(angle) * (inner_r + bar_len)
         y_outer = cy + np.sin(angle) * (inner_r + bar_len)
         dot_alpha = int(base_alpha * 0.7 * amp)
-        dot_col = (base_r, base_g, base_b, dot_alpha)
+        dot_col = (bar_r, bar_g, bar_b, dot_alpha)
         dot_r = 4
         ix, iy = int(x_outer), int(y_outer)
         wave_draw.ellipse(
@@ -697,6 +903,35 @@ def draw_wave_circular(
 # ---------------------------------------------------------------------------
 # Frame rendering
 # ---------------------------------------------------------------------------
+
+
+def apply_grain(img: Image.Image, intensity: float, frame_idx: int) -> Image.Image:
+    """
+    Overlay film-grain noise on *img* (RGB).
+
+    Each frame uses a different random seed so the grain animates naturally.
+    The noise is centred at 128 and blended additively:
+
+        output = clip(pixel + noise - 128, 0, 255)
+
+    At intensity=0.0 the image is unchanged; at intensity=1.0 the noise
+    amplitude spans ±128 (full range).
+
+    `intensity` — float in [0.0, 1.0].
+    `frame_idx` — used as RNG seed so every frame has unique grain.
+    """
+    if intensity <= 0.0:
+        return img
+
+    rng = np.random.default_rng(frame_idx)
+    arr = np.array(img, dtype=np.int16)
+
+    # Noise amplitude: 0 → 0 px, 1.0 → ±128 px
+    amplitude = int(round(intensity * 128))
+    noise = rng.integers(-amplitude, amplitude + 1, size=arr.shape, dtype=np.int16)
+
+    arr = np.clip(arr + noise, 0, 255).astype(np.uint8)
+    return Image.fromarray(arr, "RGB")
 
 
 def render_frame(
@@ -715,6 +950,11 @@ def render_frame(
     font_time: ImageFont.FreeTypeFont,
     layout_config: dict | None = None,
     wave_style: str = "line",
+    text_gradient_colors: list[tuple] | None = None,
+    wave_gradient_colors: list[tuple] | None = None,
+    text_gradient_dir: str = "horizontal",
+    wave_gradient_dir: str = "horizontal",
+    grain: float = 0.0,
 ) -> Image.Image:
     # Use classic layout if none provided (backwards compat)
     lc = layout_config if layout_config is not None else get_layout_config("classic")
@@ -742,14 +982,79 @@ def render_frame(
 
     # Draw waveform with selected style
     if wave_style == "circular":
-        draw_wave_circular(wave_draw, samples, lc, wave_color, wave_fill, centre_color)
+        draw_wave_circular(
+            wave_draw,
+            samples,
+            lc,
+            wave_color,
+            wave_fill,
+            centre_color,
+            wave_gradient_colors,
+        )
     else:
-        draw_wave_line(wave_draw, samples, lc, wave_color, wave_fill, centre_color)
+        draw_wave_line(
+            wave_draw,
+            samples,
+            lc,
+            wave_color,
+            wave_fill,
+            centre_color,
+            wave_gradient_colors,
+        )
 
     # Edge fade (horizontal gradient → infinite-wave illusion)
     # Only apply for line style; circular doesn't need it
     if wave_style == "line":
         wave_arr = np.array(wave_layer, dtype=np.float32)
+
+        # Apply wave colour gradient if requested
+        if wave_gradient_colors and len(wave_gradient_colors) >= 2:
+            n = len(wave_gradient_colors)
+            if wave_gradient_dir == "horizontal":
+                w = wave_arr.shape[1]
+                for col in range(w):
+                    t = col / max(w - 1, 1)
+                    seg_size = 1.0 / (n - 1)
+                    idx = min(int(t / seg_size), n - 2)
+                    t_local = (t - idx * seg_size) / seg_size
+                    c0 = wave_gradient_colors[idx]
+                    c1 = wave_gradient_colors[idx + 1]
+                    cr = c0[0] + (c1[0] - c0[0]) * t_local
+                    cg = c0[1] + (c1[1] - c0[1]) * t_local
+                    cb = c0[2] + (c1[2] - c0[2]) * t_local
+                    existing_alpha = wave_arr[:, col, 3]
+                    wave_arr[:, col, 0] = np.where(
+                        existing_alpha > 0, cr, wave_arr[:, col, 0]
+                    )
+                    wave_arr[:, col, 1] = np.where(
+                        existing_alpha > 0, cg, wave_arr[:, col, 1]
+                    )
+                    wave_arr[:, col, 2] = np.where(
+                        existing_alpha > 0, cb, wave_arr[:, col, 2]
+                    )
+            else:  # vertical (default)
+                h = wave_arr.shape[0]
+                for row in range(h):
+                    t = row / max(h - 1, 1)
+                    seg_size = 1.0 / (n - 1)
+                    idx = min(int(t / seg_size), n - 2)
+                    t_local = (t - idx * seg_size) / seg_size
+                    c0 = wave_gradient_colors[idx]
+                    c1 = wave_gradient_colors[idx + 1]
+                    cr = c0[0] + (c1[0] - c0[0]) * t_local
+                    cg = c0[1] + (c1[1] - c0[1]) * t_local
+                    cb = c0[2] + (c1[2] - c0[2]) * t_local
+                    existing_alpha = wave_arr[row, :, 3]
+                    wave_arr[row, :, 0] = np.where(
+                        existing_alpha > 0, cr, wave_arr[row, :, 0]
+                    )
+                    wave_arr[row, :, 1] = np.where(
+                        existing_alpha > 0, cg, wave_arr[row, :, 1]
+                    )
+                    wave_arr[row, :, 2] = np.where(
+                        existing_alpha > 0, cb, wave_arr[row, :, 2]
+                    )
+
         fade = np.ones(WIDTH, dtype=np.float32)
         x0 = lc["wave_x_start"]
         x1 = x0 + lc["wave_width"]
@@ -808,7 +1113,23 @@ def render_frame(
     tx = lc["text_x"]
     anchor = lc["text_anchor"]
 
-    if anchor == "center":
+    # Build fade-adjusted gradient colours (or fall back to flat text_color)
+    faded_grad: list[tuple] | None = None
+    if text_gradient_colors:
+        faded_grad = [(c[0], c[1], c[2], ua(c[3])) for c in text_gradient_colors]
+
+    if faded_grad:
+        draw_gradient_text(
+            ui_layer,
+            time_str,
+            font_time,
+            tx,
+            lc["text_y_time"],
+            faded_grad,
+            anchor,
+            direction=text_gradient_dir,
+        )
+    elif anchor == "center":
         draw.text(
             (tx, lc["text_y_time"]),
             time_str,
@@ -827,13 +1148,25 @@ def render_frame(
     else:
         draw.text((tx, lc["text_y_time"]), time_str, font=font_time, fill=text_color)
 
-    # Track info
+    # Track info — truncate text that exceeds the available width
+    max_w = lc["text_max_width"]
     for text, font, y in [
-        (title, font_title, lc["text_y_title"]),
-        (artist, font_artist, lc["text_y_artist"]),
-        (album, font_album, lc["text_y_album"]),
+        (fit_text(title, font_title, max_w), font_title, lc["text_y_title"]),
+        (fit_text(artist, font_artist, max_w), font_artist, lc["text_y_artist"]),
+        (fit_text(album, font_album, max_w), font_album, lc["text_y_album"]),
     ]:
-        if anchor == "center":
+        if faded_grad:
+            draw_gradient_text(
+                ui_layer,
+                text,
+                font,
+                tx,
+                y,
+                faded_grad,
+                anchor,
+                direction=text_gradient_dir,
+            )
+        elif anchor == "center":
             draw.text((tx, y), text, font=font, fill=text_color, anchor="mt")
         elif anchor == "right":
             draw.text((tx, y), text, font=font, fill=text_color, anchor="rt")
@@ -841,8 +1174,12 @@ def render_frame(
             draw.text((tx, y), text, font=font, fill=text_color)
 
     frame = Image.alpha_composite(frame, ui_layer)
+    result = frame.convert("RGB")
 
-    return frame.convert("RGB")
+    if grain > 0.0:
+        result = apply_grain(result, grain, frame_idx)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -858,6 +1195,8 @@ def render_cover(
     color: str,
     font_path: str | None = None,
     font_bold_path: str | None = None,
+    text_gradient_colors: list[tuple] | None = None,
+    text_gradient_dir: str = "horizontal",
 ) -> Image.Image:
     """
     Render a 4K cover image: same background, text centred and larger.
@@ -869,6 +1208,15 @@ def render_cover(
     font_title = load_font_bold(160, font_bold_path)
     font_artist = load_font_regular(120, font_path)
     font_album = load_font_regular(96, font_path)
+
+    # Maximum text width: canvas minus comfortable margins on each side
+    _cover_margin = 200
+    _cover_max_w = WIDTH - 2 * _cover_margin
+
+    # Truncate texts that would exceed the available width
+    title = fit_text(title, font_title, _cover_max_w)
+    artist = fit_text(artist, font_artist, _cover_max_w)
+    album = fit_text(album, font_album, _cover_max_w)
 
     cover = bg.copy().convert("RGBA")
     draw = ImageDraw.Draw(cover, "RGBA")
@@ -894,21 +1242,39 @@ def render_cover(
     # Centre the whole block vertically
     y = (HEIGHT - block_h) // 2
 
-    def draw_text_centred(text: str, font: ImageFont.FreeTypeFont, y_top: int) -> None:
-        w, _ = text_size(text, font)
-        x = cx - w // 2
-        draw.text((x, y_top), text, font=font, fill=text_color)
+    if text_gradient_colors:
+        # Full-opacity gradient colours for cover
+        for txt, font, y_pos in [
+            (title, font_title, y),
+            (artist, font_artist, y + th + GAP_TITLE_ARTIST),
+            (album, font_album, y + th + GAP_TITLE_ARTIST + ah + GAP_ARTIST_ALBUM),
+        ]:
+            w, _ = text_size(txt, font)
+            x = cx - w // 2
+            draw_gradient_text(
+                cover,
+                txt,
+                font,
+                x,
+                y_pos,
+                text_gradient_colors,
+                anchor=None,
+                direction=text_gradient_dir,
+            )
+    else:
 
-    # Title
-    draw_text_centred(title, font_title, y)
-    y += th + GAP_TITLE_ARTIST
+        def draw_text_centred(
+            text: str, font: ImageFont.FreeTypeFont, y_top: int
+        ) -> None:
+            w, _ = text_size(text, font)
+            x = cx - w // 2
+            draw.text((x, y_top), text, font=font, fill=text_color)
 
-    # Artist
-    draw_text_centred(artist, font_artist, y)
-    y += ah + GAP_ARTIST_ALBUM
-
-    # Album
-    draw_text_centred(album, font_album, y)
+        draw_text_centred(title, font_title, y)
+        y += th + GAP_TITLE_ARTIST
+        draw_text_centred(artist, font_artist, y)
+        y += ah + GAP_ARTIST_ALBUM
+        draw_text_centred(album, font_album, y)
 
     return cover.convert("RGB")
 
@@ -939,6 +1305,11 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         font_bold_path,
         layout_name,
         wave_style,
+        text_gradient_colors,
+        wave_gradient_colors,
+        text_gradient_dir,
+        wave_gradient_dir,
+        grain,
     ) = args_tuple
 
     samples = np.frombuffer(samples_bytes, dtype=np.float32).copy()
@@ -967,6 +1338,11 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         font_time=font_time,
         layout_config=lc,
         wave_style=wave_style,
+        text_gradient_colors=text_gradient_colors,
+        wave_gradient_colors=wave_gradient_colors,
+        text_gradient_dir=text_gradient_dir,
+        wave_gradient_dir=wave_gradient_dir,
+        grain=grain,
     )
     return frame_idx, img.tobytes()  # raw RGB24
 
@@ -1038,6 +1414,11 @@ def render_and_encode(
     font_bold_path: str | None = None,
     layout: str = "classic",
     wave_style: str = "line",
+    text_gradient_colors: list[tuple] | None = None,
+    wave_gradient_colors: list[tuple] | None = None,
+    text_gradient_dir: str = "horizontal",
+    wave_gradient_dir: str = "horizontal",
+    grain: float = 0.0,
 ) -> None:
     """
     Render all frames in parallel and stream raw RGB24 directly into FFmpeg
@@ -1138,6 +1519,11 @@ def render_and_encode(
             font_bold_path,
             layout,
             wave_style,
+            text_gradient_colors,
+            wave_gradient_colors,
+            text_gradient_dir,
+            wave_gradient_dir,
+            grain,
         )
         for i in range(n_frames)
     ]
@@ -1325,6 +1711,62 @@ Examples:
         ),
     )
     parser.add_argument(
+        "--text-gradient",
+        default=None,
+        dest="text_gradient",
+        type=validate_gradient_colors,
+        help=(
+            "Comma-separated hex colors for a vertical gradient applied to all text. "
+            "Overrides --color for text elements when provided. "
+            "Example: '#FF0000,#0000FF' or '#FF0000,#FFFFFF,#0000FF'."
+        ),
+    )
+    parser.add_argument(
+        "--wave-gradient",
+        default=None,
+        dest="wave_gradient",
+        type=validate_gradient_colors,
+        help=(
+            "Comma-separated hex colors for a gradient applied to the waveform. "
+            "Overrides --color for the waveform when provided. "
+            "For 'line' style: vertical gradient (top→bottom). "
+            "For 'circular' style: angular gradient (bars cycle through colors). "
+            "Example: '#FF0000,#0000FF' or '#FF0000,#FFFFFF,#0000FF'."
+        ),
+    )
+    parser.add_argument(
+        "--text-gradient-dir",
+        choices=["vertical", "horizontal"],
+        default="horizontal",
+        dest="text_gradient_dir",
+        help=(
+            "Direction of the text gradient. "
+            "'horizontal' = left→right (default); 'vertical' = top→bottom."
+        ),
+    )
+    parser.add_argument(
+        "--wave-gradient-dir",
+        choices=["vertical", "horizontal"],
+        default="horizontal",
+        dest="wave_gradient_dir",
+        help=(
+            "Direction of the waveform gradient (line style only). "
+            "'horizontal' = left→right (default); 'vertical' = top→bottom."
+        ),
+    )
+    parser.add_argument(
+        "--grain",
+        type=float,
+        default=0.0,
+        help=(
+            "Film-grain intensity applied on top of every frame. "
+            "Range 0.0–1.0 (default: 0.0 = disabled). "
+            "Noise is frame-animated and blended as a neutral overlay "
+            "(values below 128 darken, above 128 lighten). "
+            "Suggested range: 0.05–0.20 for a subtle analogue feel."
+        ),
+    )
+    parser.add_argument(
         "--smoothing-window",
         type=int,
         default=SMOOTHING_WINDOW,
@@ -1395,6 +1837,14 @@ def process_file(
         f"Rendering {n_frames} frames with {args.workers} workers → piping to FFmpeg "
         f"({args.gpu if args.gpu != 'none' else 'libx264 CPU'})..."
     )
+
+    text_gradient_colors = (
+        parse_gradient_colors(args.text_gradient) if args.text_gradient else None
+    )
+    wave_gradient_colors = (
+        parse_gradient_colors(args.wave_gradient) if args.wave_gradient else None
+    )
+
     render_and_encode(
         frames_samples=frames_samples,
         bg=bg,
@@ -1413,6 +1863,11 @@ def process_file(
         font_bold_path=args.font_bold,
         layout=args.layout,
         wave_style=args.wave_style,
+        text_gradient_colors=text_gradient_colors,
+        wave_gradient_colors=wave_gradient_colors,
+        text_gradient_dir=args.text_gradient_dir,
+        wave_gradient_dir=args.wave_gradient_dir,
+        grain=args.grain,
     )
 
     cover_path = str(Path(output_path).with_suffix(".jpg"))
@@ -1432,6 +1887,8 @@ def process_file(
         color=args.color,
         font_path=args.font,
         font_bold_path=args.font_bold,
+        text_gradient_colors=text_gradient_colors,
+        text_gradient_dir=args.text_gradient_dir,
     )
     cover.save(cover_path, "JPEG", quality=95, subsampling=0)
     print(f"Cover saved: {cover_path}")

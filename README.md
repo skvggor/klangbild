@@ -46,26 +46,6 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 
 ---
 
-## Requirements
-
-- Python ≥ 3.11
-- [uv](https://github.com/astral-sh/uv) (package manager)
-- FFmpeg ≥ 5 (must be in `$PATH`)
-- For NVIDIA GPU encoding: NVENC-capable driver
-- For Intel/AMD GPU encoding: Mesa VA-API
-
----
-
-## Installation
-
-```bash
-git clone https://github.com/skvggor/klangbild.git
-cd klangbild
-uv sync
-```
-
----
-
 ## Usage
 
 ### Basic
@@ -161,6 +141,26 @@ uv run python visualizer.py \
     --font-bold "Montserrat-Black.ttf" \
     --gpu nvenc \
     --workers 30
+```
+
+---
+
+## Requirements
+
+- Python ≥ 3.11
+- [uv](https://github.com/astral-sh/uv) (package manager)
+- FFmpeg ≥ 5 (must be in `$PATH`)
+- For NVIDIA GPU encoding: NVENC-capable driver
+- For Intel/AMD GPU encoding: Mesa VA-API
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/skvggor/klangbild.git
+cd klangbild
+uv sync
 ```
 
 ---
