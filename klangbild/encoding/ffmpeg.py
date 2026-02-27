@@ -3,7 +3,6 @@ import sys
 import queue
 import threading
 import multiprocessing as mp
-from pathlib import Path
 
 import numpy as np
 from PIL import Image
@@ -70,6 +69,13 @@ def render_and_encode(
     workers: int = 1,
     font_path: str | None = None,
     font_bold_path: str | None = None,
+    text_gradient: str | None = None,
+    text_gradient_dir: str = "horizontal",
+    wave_gradient: str | None = None,
+    wave_gradient_dir: str = "horizontal",
+    grain: float = 0.0,
+    layout: str = "classic",
+    wave_style: str = "line",
 ) -> None:
     codec_args = _build_video_codec_args(gpu)
 
@@ -155,6 +161,13 @@ def render_and_encode(
             color,
             font_path,
             font_bold_path,
+            text_gradient,
+            text_gradient_dir,
+            wave_gradient,
+            wave_gradient_dir,
+            grain,
+            layout,
+            wave_style,
         )
         for i in range(n_frames)
     ]

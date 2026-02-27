@@ -1,8 +1,8 @@
 import argparse
 import multiprocessing as mp
 
-from .config.constants import SMOOTHING_WINDOW, TEMPORAL_ALPHA, FPS
-from .utils.colors import validate_hex_color
+from .config.constants import SMOOTHING_WINDOW, TEMPORAL_ALPHA
+from .utils.colors import validate_hex_color, validate_gradient_colors
 
 
 def parse_args() -> argparse.Namespace:
@@ -57,6 +57,12 @@ Examples:
     )
     parser.add_argument(
         "--background", required=True, help="Path to the background image."
+    )
+    parser.add_argument(
+        "--cover-background",
+        default=None,
+        dest="cover_background",
+        help="Separate background image for cover JPG (default: same as --background).",
     )
     parser.add_argument("--title", default=None, help="Song title (single-file mode).")
     parser.add_argument(
@@ -119,6 +125,19 @@ Examples:
         ),
     )
     parser.add_argument(
+        "--layout",
+        choices=["classic", "spotlight", "split-left", "split-right"],
+        default="classic",
+        help="Visual layout (default: classic).",
+    )
+    parser.add_argument(
+        "--wave-style",
+        choices=["line", "circular"],
+        default="line",
+        dest="wave_style",
+        help="Waveform drawing style (default: line).",
+    )
+    parser.add_argument(
         "--smoothing-window",
         type=int,
         default=SMOOTHING_WINDOW,
@@ -138,5 +157,45 @@ Examples:
             f"(default: {TEMPORAL_ALPHA}). Range 0.0–1.0. "
             "Lower = more lag/fluid, higher = more reactive/jittery."
         ),
+    )
+    parser.add_argument(
+        "--text-gradient",
+        default=None,
+        type=validate_gradient_colors,
+        dest="text_gradient",
+        help=(
+            "Gradient colors for text (e.g., #FFFFFF,#808080). "
+            "Overrides --color for text elements."
+        ),
+    )
+    parser.add_argument(
+        "--text-gradient-dir",
+        choices=["horizontal", "vertical"],
+        default="horizontal",
+        dest="text_gradient_dir",
+        help="Text gradient direction (default: horizontal).",
+    )
+    parser.add_argument(
+        "--wave-gradient",
+        default=None,
+        type=validate_gradient_colors,
+        dest="wave_gradient",
+        help=(
+            "Gradient colors for waveform (e.g., #FFFFFF,#808080). "
+            "Overrides --color for waveform."
+        ),
+    )
+    parser.add_argument(
+        "--wave-gradient-dir",
+        choices=["horizontal", "vertical"],
+        default="horizontal",
+        dest="wave_gradient_dir",
+        help="Waveform gradient direction (default: horizontal).",
+    )
+    parser.add_argument(
+        "--grain",
+        type=float,
+        default=0.0,
+        help="Film-grain intensity: 0.0 (off) to 1.0 (default: 0.0).",
     )
     return parser.parse_args()
