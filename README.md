@@ -1,9 +1,30 @@
 <p align="center">
   <img src="assets/icon.svg" alt="klangbild icon" width="120" height="120"/><br/>
- <h1 align="center">klangbild</h1>
+  <h1 align="center">klangbild</h1>
 </p>
 
 Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (JPG) from any MP3 file.
+
+---
+
+## Table of Contents
+
+1. [Features](#features)
+2. [Examples](#examples)
+3. [Requirements](#requirements)
+4. [Installation](#installation)
+5. [Usage](#usage)
+6. [Options](#options)
+7. [Resources](#resources)
+   - [Layouts](#layouts)
+   - [Wave Styles](#wave-styles)
+   - [Gradients](#gradients)
+   - [Film Grain](#film-grain)
+8. [Output](#output)
+
+---
+
+## Features
 
 - Multiple layout options: classic, spotlight, split-left, split-right
 - Two waveform styles: mirrored lines or radial/circular
@@ -43,6 +64,26 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 | Low (0.08) | Medium (0.15) | High (0.25) |
 |:----------:|:-------------:|:-----------:|
 | ![grain low](assets/grain_low.jpg) | ![grain medium](assets/grain_medium.jpg) | ![grain high](assets/grain_high.jpg) |
+
+---
+
+## Requirements
+
+- Python ≥ 3.11
+- [uv](https://github.com/astral-sh/uv) (package manager)
+- FFmpeg ≥ 5 (must be in `$PATH`)
+- For NVIDIA GPU encoding: NVENC-capable driver
+- For Intel/AMD GPU encoding: Mesa VA-API
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/skvggor/klangbild.git
+cd klangbild
+uv sync
+```
 
 ---
 
@@ -145,26 +186,6 @@ uv run klangbild \
 
 ---
 
-## Requirements
-
-- Python ≥ 3.11
-- [uv](https://github.com/astral-sh/uv) (package manager)
-- FFmpeg ≥ 5 (must be in `$PATH`)
-- For NVIDIA GPU encoding: NVENC-capable driver
-- For Intel/AMD GPU encoding: Mesa VA-API
-
----
-
-## Installation
-
-```bash
-git clone https://github.com/skvggor/klangbild.git
-cd klangbild
-uv sync
-```
-
----
-
 ## Options
 
 | Flag | Default | Description |
@@ -195,7 +216,51 @@ uv sync
 
 ---
 
-## Gradients
+## Resources
+
+### Layouts
+
+The `--layout` flag controls how elements are positioned on the 3840×2160 canvas.
+
+| Layout | Description |
+|--------|-------------|
+| `classic` | Original layout. Waveform centred, text stacked below, seek bar at bottom. |
+| `spotlight` | Large centred text with generous margins. Seek bar above text, waveform below. |
+| `split-left` | Two-column layout. Waveform on the left, text on the right, full-width seek bar at bottom. |
+| `split-right` | Two-column layout. Text on the left, waveform on the right, full-width seek bar at bottom. |
+
+Reference layout images are included in `assets/`:
+
+| Spec file | Description |
+|-----------|-------------|
+| `spec_classic_line.png` | classic + line waveform |
+| `spec_classic_circular.png` | classic + circular waveform |
+| `spec_spotlight_line.png` | spotlight + line waveform |
+| `spec_spotlight_circular.png` | spotlight + circular waveform |
+| `spec_split-left_line.png` | split-left + line waveform |
+| `spec_split-left_circular.png` | split-left + circular waveform |
+| `spec_split-right_line.png` | split-right + line waveform |
+| `spec_split-right_circular.png` | split-right + circular waveform |
+| `spec_cover.png` | cover image layout |
+
+Each spec shows:
+- Waveform area (blue for line, orange for circular)
+- Text area (green)
+- Seek bar (yellow)
+- Dimensions and positions
+
+### Wave Styles
+
+The `--wave-style` flag controls how the waveform is drawn.
+
+| Style | Description |
+|-------|-------------|
+| `line` | Classic mirrored waveform lines with fill. |
+| `circular` | Radial waveform — bars project outward from a central ring. |
+
+Both styles react to the audio in real-time. The circular style works best with spotlight layout.
+
+### Gradients
 
 Both text and waveform support independent color gradients. Each flag accepts two or more `#RGB` or `#RRGGBB` values separated by commas.
 
@@ -233,55 +298,7 @@ When `--text-gradient` is provided it overrides `--color` for all text elements.
 
 For the `circular` waveform style the gradient direction flag is ignored — colors cycle angularly around the ring instead.
 
----
-
-## Layouts
-
-The `--layout` flag controls how elements are positioned on the 3840×2160 canvas.
-
-| Layout | Description |
-|--------|-------------|
-| `classic` | Original layout. Waveform centred, text stacked below, seek bar at bottom. |
-| `spotlight` | Large centred text with generous margins. Seek bar above text, waveform below. |
-| `split-left` | Two-column layout. Waveform on the left, text on the right, full-width seek bar at bottom. |
-| `split-right` | Two-column layout. Text on the left, waveform on the right, full-width seek bar at bottom. |
-
-Reference layout images are included in `assets/`:
-
-| Spec file | Description |
-|-----------|-------------|
-| `spec_classic_line.png` | classic + line waveform |
-| `spec_classic_circular.png` | classic + circular waveform |
-| `spec_spotlight_line.png` | spotlight + line waveform |
-| `spec_spotlight_circular.png` | spotlight + circular waveform |
-| `spec_split-left_line.png` | split-left + line waveform |
-| `spec_split-left_circular.png` | split-left + circular waveform |
-| `spec_split-right_line.png` | split-right + line waveform |
-| `spec_split-right_circular.png` | split-right + circular waveform |
-| `spec_cover.png` | cover image layout |
-
-Each spec shows:
-- Waveform area (blue for line, orange for circular)
-- Text area (green)
-- Seek bar (yellow)
-- Dimensions and positions
-
----
-
-## Wave Styles
-
-The `--wave-style` flag controls how the waveform is drawn.
-
-| Style | Description |
-|-------|-------------|
-| `line` | Classic mirrored waveform lines with fill. |
-| `circular` | Radial waveform — bars project outward from a central ring. |
-
-Both styles react to the audio in real-time. The circular style works best with spotlight layout.
-
----
-
-## Film Grain
+### Film Grain
 
 The `--grain` flag overlays animated film grain on every frame. The value is a float between `0.0` (no grain) and `1.0` (heavy grain). At `0.0` the effect is completely skipped with no performance cost.
 
