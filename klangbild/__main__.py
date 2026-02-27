@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from argparse import Namespace
 from PIL import Image
 from .config.constants import FPS, LANG_PREFIXES
 from .cli import parse_args
@@ -16,7 +17,7 @@ def process_file(
     artist: str,
     album: str,
     output_path: str,
-    args,
+    args: Namespace,
     bg: Image.Image | None = None,
 ) -> None:
     print(f"\n--- Processing: {audio_path} ---")
@@ -49,6 +50,13 @@ def process_file(
         artist=display_artist,
         album=display_album,
         color=args.color,
+        text_gradient=args.text_gradient,
+        text_gradient_dir=args.text_gradient_dir,
+        wave_gradient=args.wave_gradient,
+        wave_gradient_dir=args.wave_gradient_dir,
+        grain=args.grain,
+        layout=args.layout,
+        wave_style=args.wave_style,
         audio_path=audio_path,
         output_path=output_path,
         fps=FPS,
@@ -60,12 +68,18 @@ def process_file(
 
     cover_path = str(Path(output_path).with_suffix(".jpg"))
     print("Generating cover image...")
+    cover_bg = (
+        prepare_background(args.cover_background) if args.cover_background else bg
+    )
     cover = render_cover(
-        bg=bg,
+        bg=cover_bg,
         title=title,
         artist=display_artist,
         album=display_album,
         color=args.color,
+        text_gradient=args.text_gradient,
+        text_gradient_dir=args.text_gradient_dir,
+        grain=args.grain,
         font_path=args.font,
         font_bold_path=args.font_bold,
     )
@@ -93,7 +107,7 @@ def main() -> None:
         (args.font_bold, "--font-bold"),
     ]:
         if path and not Path(path).exists():
-            print(f"Error: font file found ({label}): {path}")
+            print(f"Error: font file not found ({label}): {path}")
             sys.exit(1)
 
     bg = prepare_background(args.background)
@@ -132,9 +146,11 @@ def main() -> None:
         print(f"Error: audio file not found: {args.audio}")
         sys.exit(1)
 
-    title = args.title or Path(args.audio).stem
-    artist = args.artist or ""
-    album = args.album or ""
+    # CLI args take precedence; fall back to ID3 tags from the audio file.
+    id3_title, id3_artist, id3_album = read_id3_tags(args.audio)
+    title = args.title or id3_title
+    artist = args.artist or id3_artist
+    album = args.album or id3_album
     output_path = args.output
 
     process_file(

@@ -1,5 +1,5 @@
 from PIL import Image
-from ..config.constants import WIDTH, HEIGHT, BG_DARKEN_ALPHA
+from ..config.constants import WIDTH, HEIGHT
 
 
 def prepare_background(image_path: str) -> Image.Image:
@@ -21,9 +21,5 @@ def prepare_background(image_path: str) -> Image.Image:
     left = (new_w - WIDTH) // 2
     top = (new_h - HEIGHT) // 2
     bg = bg.crop((left, top, left + WIDTH, top + HEIGHT))
-
-    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, BG_DARKEN_ALPHA))
-    bg = bg.convert("RGBA")
-    bg = Image.alpha_composite(bg, overlay).convert("RGB")
 
     return bg

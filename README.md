@@ -288,7 +288,7 @@ uv run klangbild \
     --text-gradient "#FF0000,#FFFFFF,#0000FF"
 ```
 
-When `--text-gradient` is provided it overrides `--color` for all text elements. When `--wave-gradient` is provided it overrides `--color` for the waveform. Both flags are independent and can be combined freely.
+When `--text-gradient` is provided it overrides `--color` for all text elements and for the seek bar. When `--wave-gradient` is provided it overrides `--color` for the waveform. If only `--wave-gradient` is set (no text gradient), the seek bar also picks its color from the wave gradient. Both flags are independent and can be combined freely.
 
 **Direction:**
 

@@ -1,5 +1,4 @@
 import argparse
-from typing import Any
 
 
 def hex_to_rgba(hex_color: str, alpha: int = 255) -> tuple[int, int, int, int]:

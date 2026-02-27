@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image
+from ..config.layouts import get_layout_config
 from ..render.frame import render_frame
 from ..utils.fonts import load_font_bold, load_font_regular
 
@@ -19,15 +20,24 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         color,
         font_path,
         font_bold_path,
+        text_gradient,
+        text_gradient_dir,
+        wave_gradient,
+        wave_gradient_dir,
+        grain,
+        layout,
+        wave_style,
     ) = args_tuple
 
     samples = np.frombuffer(samples_bytes, dtype=np.float32).copy()
     bg = Image.frombytes("RGB", bg_size, bg_bytes)
 
-    font_title = load_font_bold(64, font_bold_path)
-    font_artist = load_font_regular(48, font_path)
-    font_album = load_font_regular(40, font_path)
-    font_time = load_font_regular(32, font_path)
+    # Use layout-specific font sizes
+    lc = get_layout_config(layout)
+    font_title = load_font_bold(lc.get("font_size_title", 80), font_bold_path)
+    font_artist = load_font_regular(lc.get("font_size_artist", 60), font_path)
+    font_album = load_font_regular(lc.get("font_size_album", 50), font_path)
+    font_time = load_font_regular(lc.get("font_size_time", 40), font_path)
 
     img = render_frame(
         bg=bg,
@@ -39,6 +49,13 @@ def _render_worker(args_tuple: tuple) -> tuple[int, bytes]:
         artist=artist,
         album=album,
         color=color,
+        text_gradient=text_gradient,
+        text_gradient_dir=text_gradient_dir,
+        wave_gradient=wave_gradient,
+        wave_gradient_dir=wave_gradient_dir,
+        grain=grain,
+        layout=layout,
+        wave_style=wave_style,
         font_title=font_title,
         font_artist=font_artist,
         font_album=font_album,
