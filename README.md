@@ -10,16 +10,16 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 ## Table of Contents
 
 1. [Features](#features)
-2. [Requirements](#requirements)
-3. [Installation](#installation)
-4. [Usage](#usage)
-5. [Options](#options)
-6. [Resources](#resources)
+2. [Examples](#examples)
+3. [Requirements](#requirements)
+4. [Installation](#installation)
+5. [Usage](#usage)
+6. [Options](#options)
+7. [Resources](#resources)
    - [Layouts](#layouts)
    - [Wave Styles](#wave-styles)
    - [Gradients](#gradients)
    - [Film Grain](#film-grain)
-7. [Examples](#examples)
 8. [Output](#output)
 
 ---
@@ -35,6 +35,35 @@ Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (J
 - GPU encoding via NVENC or VAAPI (optional)
 - Parallel CPU frame rendering piped directly to FFmpeg (no temp files)
 - Batch mode: process an entire folder of MP3s at once
+
+---
+
+## Examples
+
+### Covers
+
+![Cover](assets/cover_main.jpg)
+
+*SKVGGOR — "Мемориал Героям-панфиловцам"*
+
+---
+
+### Layouts
+
+| Layout | Line Wave | Circular Wave |
+|--------|:---------:|:-------------:|
+| **Classic** | ![classic line](assets/classic_line_warm.jpg) | ![classic circular](assets/classic_circular_warm.jpg) |
+| **Spotlight** | ![spotlight line](assets/spotlight_line_neutral.jpg) | ![spotlight circular](assets/spotlight_circular_neutral.jpg) |
+| **Split Left** | ![split-left line](assets/split-left_line_contrast.jpg) | ![split-left circular](assets/split-left_circular_contrast.jpg) |
+| **Split Right** | ![split-right line](assets/split-right_line_warm.jpg) | ![split-right circular](assets/split-right_circular_warm.jpg) |
+
+---
+
+### Film Grain
+
+| Low (0.08) | Medium (0.15) | High (0.25) |
+|:----------:|:-------------:|:-----------:|
+| ![grain low](assets/grain_low.jpg) | ![grain medium](assets/grain_medium.jpg) | ![grain high](assets/grain_high.jpg) |
 
 ---
 
@@ -286,35 +315,6 @@ uv run klangbild \
 ```
 
 Each frame uses a unique random seed so the grain animates naturally without repeating patterns.
-
----
-
-## Examples
-
-### Covers
-
-![Cover](assets/cover_main.jpg)
-
-*SKVGGOR — "Мемориал Героям-панфиловцам"*
-
----
-
-### Layouts
-
-| Layout | Line Wave | Circular Wave |
-|--------|:---------:|:-------------:|
-| **Classic** | ![classic line](assets/classic_line_warm.jpg) | ![classic circular](assets/classic_circular_warm.jpg) |
-| **Spotlight** | ![spotlight line](assets/spotlight_line_neutral.jpg) | ![spotlight circular](assets/spotlight_circular_neutral.jpg) |
-| **Split Left** | ![split-left line](assets/split-left_line_contrast.jpg) | ![split-left circular](assets/split-left_circular_contrast.jpg) |
-| **Split Right** | ![split-right line](assets/split-right_line_warm.jpg) | ![split-right circular](assets/split-right_circular_warm.jpg) |
-
----
-
-### Film Grain
-
-| Low (0.08) | Medium (0.15) | High (0.25) |
-|:----------:|:-------------:|:-----------:|
-| ![grain low](assets/grain_low.jpg) | ![grain medium](assets/grain_medium.jpg) | ![grain high](assets/grain_high.jpg) |
 
 ---
 
