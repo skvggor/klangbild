@@ -4,7 +4,6 @@ from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
 
-
 class TestSingleFileFallback:
     """Verify that single-file mode reads ID3 tags when CLI args are omitted."""
 

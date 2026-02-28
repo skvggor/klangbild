@@ -88,6 +88,32 @@ uv sync
 
 ---
 
+## Development
+
+```bash
+# Install dev dependencies
+uv sync --group dev
+
+# Set up pre-commit hooks
+uv run pre-commit install
+
+# Run all checks manually
+uv run pre-commit run --all-files
+```
+
+### Git Hooks
+
+- **Commit**: ruff (lint + format)
+- **Push**: mypy + pytest
+
+### CI
+
+Tests run automatically on PRs to `main` via GitHub Actions.
+
+---
+
+## License
+
 ## Usage
 
 ### Basic
