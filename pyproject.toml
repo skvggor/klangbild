@@ -28,6 +28,7 @@ dev = [
     "mypy>=1.11",
     "ruff>=0.5",
     "types-tqdm>=4.66",
+    "pre-commit>=4.0",
 ]
 
 [tool.pytest.ini_options]

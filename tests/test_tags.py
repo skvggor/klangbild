@@ -1,6 +1,5 @@
 """Tests for klangbild.audio.tags — ID3 tag reading."""
 
-
 import pytest
 from mutagen.id3 import ID3, TIT2, TPE1, TALB
 
