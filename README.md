@@ -94,8 +94,9 @@ uv sync
 # Install dev dependencies
 uv sync --group dev
 
-# Set up pre-commit hooks
+# Set up pre-commit hooks (pre-commit and pre-push)
 uv run pre-commit install
+uv run pre-commit install --hook-type pre-push
 
 # Run all checks manually
 uv run pre-commit run --all-files
