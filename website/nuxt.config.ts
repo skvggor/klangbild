@@ -9,7 +9,8 @@ export default defineNuxtConfig({
     port: process.env.NUXT_PORT || 3004,
     publicAssets: [
       {
-        dir: 'public',
+        dir: '.output/public',
+        baseURL: '/',
         maxAge: 60 * 60 * 24 * 7
       }
     ]
