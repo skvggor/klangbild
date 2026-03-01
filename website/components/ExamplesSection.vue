@@ -24,12 +24,13 @@
               {{ layout.description }}
             </p>
           </div>
-          <div class="overflow-hidden rounded-lg border border-[#7C3AED]/10 group-hover:border-[#7C3AED]/30 transition-colors mt-auto">
+          <div class="overflow-hidden rounded-lg border border-[#7C3AED]/10 group-hover:border-[#7C3AED]/30 transition-colors mt-auto bg-[#0a0a0f]">
             <img
               :src="layout.image"
               :alt="layout.name"
               class="w-full h-auto object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-500"
               loading="lazy"
+              @error="$event.target.src = '/icon.svg'"
             />
           </div>
         </div>
