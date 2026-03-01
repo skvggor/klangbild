@@ -1,0 +1,34 @@
+title: Features
+description: Everything you need to create professional audio visualizations
+features:
+  - title: 4K Native Output
+    description: Native 3840×2160 resolution at 30fps, ready for YouTube upload
+    icon: ph:video-camera
+  
+  - title: Multiple Layouts
+    description: Choose from Classic, Spotlight, Split-Left, and Split-Right layouts
+    icon: ph:layout
+  
+  - title: GPU Encoding
+    description: Hardware acceleration with NVENC (NVIDIA) or VAAPI (Intel/AMD)
+    icon: ph:lightning
+  
+  - title: Batch Processing
+    description: Process entire folders of MP3 files in one command
+    icon: ph:files
+  
+  - title: Waveform Styles
+    description: Line (mirrored) or Circular (radial) visualization styles
+    icon: ph:waves
+  
+  - title: Custom Fonts
+    description: Use any TTF/OTF font for titles, artists, and albums
+    icon: ph:text-t
+  
+  - title: Color Gradients
+    description: Beautiful text and waveform gradients with custom directions
+    icon: ph:paint-brush
+  
+  - title: Film Grain
+    description: Add vintage film grain effect with adjustable intensity
+    icon: ph:film-strip

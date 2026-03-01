@@ -1,0 +1,28 @@
+title: Quick Start
+description: Get started in seconds with these simple commands
+
+basicCommand: |
+  uv run klangbild \
+      --audio "song.mp3" \
+      --background "cover.jpg" \
+      --title "Song Title" \
+      --artist "Artist Name" \
+      --album "Album Name" \
+      --output "visualizer.mp4"
+
+gradientCommand: |
+  uv run klangbild \
+      --audio "song.mp3" \
+      --background "cover.jpg" \
+      --layout spotlight \
+      --wave-style circular \
+      --text-gradient "#FF8C42,#FF5A5F" \
+      --wave-gradient "#FF5A5F,#FF8C42" \
+      --output "visualizer.mp4"
+
+batchCommand: |
+  uv run klangbild \
+      --input-dir "/path/to/mp3s" \
+      --background "cover.jpg" \
+      --gpu nvenc \
+      --workers 30
