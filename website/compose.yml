@@ -9,10 +9,10 @@ services:
       - caddy_net
     labels:
       caddy: klangbild.skvggor.dev
-      caddy.reverse_proxy: "{{upstreams 3000}}"
+      caddy.reverse_proxy: "{{upstreams 3004}}"
       caddy.encode: "gzip"
     expose:
-      - 3000
+      - 3004
 
 networks:
   caddy_net:
