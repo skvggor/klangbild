@@ -1,7 +1,10 @@
 <template>
-  <section class="relative min-h-screen w-full bg-[#0a0a0f]">
-    <div class="absolute inset-0 bg-gradient-to-b from-[#0f0f1a] via-[#0a0a0f] to-[#0a0a0f]"></div>
-    
+  <section id="hero" class="relative min-h-screen w-full bg-[#0a0a0f] overflow-hidden">
+    <ClientOnly fallback-tag="div" fallback-class="absolute inset-0 bg-[#0f0f1a]">
+      <WaveBackground class="absolute inset-0 z-[1]" />
+    </ClientOnly>
+    <div class="absolute inset-0 bg-gradient-to-b from-[#0a0a0f]/40 via-transparent to-[#0a0a0f]/60 z-[2]"></div>
+
     <div class="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 sm:px-8 lg:px-12 py-6">
       <div class="flex flex-col items-center justify-center w-full max-w-4xl mx-auto text-center">
         <div class="mb-6 animate-fade-in-down">
@@ -21,8 +24,8 @@
         </div>
         
         <div class="w-full max-w-3xl mx-auto mb-10 animate-fade-in-up">
-          <div 
-            class="relative w-full bg-[#0f0f1a] rounded-lg overflow-hidden border border-[#7C3AED]/20 shadow-2xl shadow-[#7C3AED]/10"
+          <div
+            class="relative w-full bg-transparent rounded-lg overflow-hidden border border-[#7C3AED]/20 shadow-2xl shadow-[#7C3AED]/10"
             style="aspect-ratio: 16/9;"
           >
             <iframe
@@ -35,9 +38,9 @@
               allowfullscreen
             ></iframe>
             
-            <div 
+            <div
               v-show="!isPlaying"
-              class="absolute inset-0 flex items-center justify-center bg-[#0f0f1a] cursor-pointer group"
+              class="absolute inset-0 flex items-center justify-center bg-[#0a0a0f]/30 backdrop-blur-xl cursor-pointer group"
               @click="playVideo"
             >
               <div class="absolute inset-0 overflow-hidden">
@@ -72,12 +75,12 @@
           <span class="hidden sm:block text-gray-600">|</span>
           <NuxtLink
             to="https://github.com/skvggor/klangbild"
-            class="group flex items-center gap-2 text-gray-400 hover:text-[#7C3AED] transition-colors font-light"
+            class="group flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1a1a2e] hover:bg-[#1a1a2e]/80 border border-[#7C3AED]/30 hover:border-[#7C3AED]/50 transition-all duration-200"
             external
             target="_blank"
           >
-            <UIcon name="ph:github-logo" class="w-4 h-4" />
-            <span>GitHub</span>
+            <UIcon name="ph:star-fill" class="w-4 h-4 text-yellow-500" />
+            <span class="text-gray-300 font-light">Star on GitHub</span>
           </NuxtLink>
         </div>
         

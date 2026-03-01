@@ -1,10 +1,13 @@
 <template>
-  <div class="min-h-screen bg-[#0a0a0f]">
+  <div class="min-h-screen bg-[#0a0a0f] pb-32">
     <HeroSection />
     <FeaturesSection />
     <ExamplesSection />
     <QuickStartSection />
     <FooterSection />
+    <ClientOnly>
+      <PlayerControl />
+    </ClientOnly>
   </div>
 </template>
 

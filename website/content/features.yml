@@ -32,3 +32,7 @@ features:
   - title: Film Grain
     description: Add vintage film grain effect with adjustable intensity
     icon: ph:film-strip
+
+  - title: ID3 Tag Support
+    description: Read artist, title, and album metadata directly from MP3 files
+    icon: ph:music-notes
