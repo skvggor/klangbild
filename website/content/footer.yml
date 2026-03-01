@@ -1,0 +1,17 @@
+repoUrl: https://github.com/skvggor/klangbild
+authorName: Marcos Lima
+authorUrl: https://skvggor.dev
+license: GNU General Public License v3.0
+copyright: © 2026 klangbild. All rights reserved.
+links:
+  - name: GitHub
+    url: https://github.com/skvggor/klangbild
+    icon: ph:github-logo
+  
+  - name: Documentation
+    url: https://github.com/skvggor/klangbild#readme
+    icon: ph:book-open
+  
+  - name: Author
+    url: https://skvggor.dev
+    icon: ph:user

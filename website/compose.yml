@@ -1,0 +1,19 @@
+services:
+  klangbild-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: klangbild-landing
+    restart: unless-stopped
+    networks:
+      - caddy_net
+    labels:
+      caddy: klangbild.skvggor.dev
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+      caddy.encode: "gzip"
+    expose:
+      - 3000
+
+networks:
+  caddy_net:
+    external: true

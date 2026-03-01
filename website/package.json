@@ -1,0 +1,27 @@
+{
+  "name": "klangbild-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
+  },
+  "dependencies": {
+    "@nuxt/content": "^2.13.4",
+    "@nuxt/icon": "^1.11.0",
+    "@nuxt/ui": "^2.22.0",
+    "@nuxtjs/tailwindcss": "^6.13.2",
+    "@types/three": "^0.174.0",
+    "nuxt": "^3.16.0",
+    "three": "^0.174.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4"
+  }
+}

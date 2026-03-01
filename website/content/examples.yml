@@ -1,0 +1,18 @@
+title: Examples
+description: See what you can create with klangbild
+layouts:
+  - name: Classic
+    description: Original layout with waveform centered and text below
+    image: /examples/classic.jpg
+  
+  - name: Spotlight
+    description: Large centered text with waveform below
+    image: /examples/spotlight.jpg
+  
+  - name: Split Left
+    description: Waveform on the left, text on the right
+    image: /examples/split-left.jpg
+  
+  - name: Split Right
+    description: Text on the left, waveform on the right
+    image: /examples/split-right.jpg
