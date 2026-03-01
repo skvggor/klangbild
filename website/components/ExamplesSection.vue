@@ -30,7 +30,6 @@
               :alt="layout.name"
               class="w-full h-auto object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-500"
               loading="lazy"
-              @error="$event.target.src = '/icon.svg'"
             />
           </div>
         </div>

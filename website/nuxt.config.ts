@@ -6,7 +6,13 @@ export default defineNuxtConfig({
   
   nitro: {
     preset: 'node-server',
-    port: process.env.NUXT_PORT || 3004
+    port: process.env.NUXT_PORT || 3004,
+    publicAssets: [
+      {
+        dir: 'public',
+        maxAge: 60 * 60 * 24 * 7
+      }
+    ]
   },
   
   modules: [
