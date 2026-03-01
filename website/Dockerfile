@@ -24,6 +24,7 @@ ENV PORT=3004
 ENV NITRO_PORT=3004
 
 COPY --from=builder /app/.output ./.output
+COPY --from=builder /app/public ./public
 
 EXPOSE 3004
 
