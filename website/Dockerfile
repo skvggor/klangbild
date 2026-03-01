@@ -20,6 +20,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NUXT_HOST=0.0.0.0
 ENV NUXT_PORT=3004
+ENV PORT=3004
+ENV NITRO_PORT=3004
 
 COPY --from=builder /app/.output ./.output
 

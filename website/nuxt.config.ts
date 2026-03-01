@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   ssr: true,
   
   nitro: {
-    preset: 'node-server'
+    preset: 'node-server',
+    port: process.env.NUXT_PORT || 3004
   },
   
   modules: [
