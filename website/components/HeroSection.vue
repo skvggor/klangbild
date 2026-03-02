@@ -21,6 +21,9 @@
           <p class="text-lg md:text-2xl lg:text-3xl text-gray-400 max-w-2xl mx-auto font-light">
             Generate stunning 4K audio visualizer videos for YouTube
           </p>
+          <p class="text-sm md:text-base text-gray-500 mt-2 font-light">
+            Linux-only command-line tool
+          </p>
         </div>
         
         <div class="w-full max-w-3xl mx-auto mb-10 animate-fade-in-up">
