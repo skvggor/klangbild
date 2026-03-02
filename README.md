@@ -5,6 +5,8 @@
 
 Generate a **4K audio visualizer video** (MP4) and a matching **cover image** (JPG) from any MP3 file.
 
+A **Linux-only command-line tool** written in Python.
+
 ---
 
 ## Table of Contents

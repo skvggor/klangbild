@@ -18,7 +18,7 @@ useHead({
     {
       name: "description",
       content:
-        "Generate stunning 4K audio visualizer videos and cover images for YouTube from any MP3 file",
+        "Linux-only command-line tool to generate stunning 4K audio visualizer videos and cover images for YouTube from any MP3 file",
     },
   ],
 });
