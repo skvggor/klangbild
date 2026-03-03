@@ -15,7 +15,7 @@
               class="w-16 h-16 md:w-20 md:h-20 mx-auto"
             />
           </div>
-          <h1 class="text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-light text-white mb-4 tracking-tight bg-gradient-to-r from-[#7C3AED] via-[#06B6D4] to-[#7C3AED] bg-clip-text text-transparent">
+          <h1 class="text-4xl md:text-6xl lg:text-7xl xl:text-8xl text-white mb-4 tracking-tight bg-gradient-to-r from-[#7C3AED] via-[#06B6D4] to-[#7C3AED] bg-clip-text text-transparent">
             klangbild
           </h1>
           <p class="text-lg md:text-2xl lg:text-3xl text-gray-400 max-w-2xl mx-auto font-light">

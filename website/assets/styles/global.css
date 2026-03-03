@@ -3,13 +3,15 @@
 html,
 body {
   font-family:
-    "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .font-sans {
   font-family:
-    "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
 }
 
@@ -19,8 +21,30 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: "Montserrat", sans-serif;
-  font-weight: 300;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: 3rem;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 2.25rem;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+p {
+  font-size: 1rem;
+  line-height: 1.7;
 }
 
 code,
