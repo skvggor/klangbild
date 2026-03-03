@@ -38,11 +38,11 @@
             />
           </div>
 
-          <span class="flex-shrink-0 text-sm md:text-base text-gray-400 font-light w-12 text-right">
+          <span class="flex-shrink-0 text-sm md:text-base text-gray-400 w-12 text-right">
             {{ progressPercent }}%
           </span>
 
-          <div class="flex-shrink-0 text-xs md:text-sm text-gray-500 font-light hidden sm:block">
+          <div class="flex-shrink-0 text-xs md:text-sm text-gray-500 hidden sm:block">
             <span class="text-[#7C3AED]">{{ currentTime }}</span>
             <span class="mx-1 text-gray-600">/</span>
             <span>{{ totalTime }}</span>

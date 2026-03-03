@@ -2,10 +2,10 @@
   <section id="features" class="py-24 bg-[#0a0a0f]">
     <div class="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12">
       <div class="section-header mb-16">
-        <h2 class="text-3xl md:text-4xl lg:text-5xl font-light text-white mb-4 tracking-tight">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl text-white mb-4 tracking-tight">
           {{ features?.title || 'Features' }}
         </h2>
-        <p class="text-lg md:text-xl lg:text-2xl text-gray-400 font-light">
+        <p class="text-lg md:text-xl lg:text-2xl text-gray-400">
           {{ features?.description || 'Everything you need to create professional audio visualizations' }}
         </p>
       </div>
@@ -25,7 +25,7 @@
             <h3 class="text-base md:text-lg lg:text-xl font-normal text-white mb-2">
               {{ feature.title }}
             </h3>
-            <p class="text-gray-400 text-sm md:text-base lg:text-lg font-light leading-relaxed flex-grow">
+            <p class="text-gray-400 text-sm md:text-base lg:text-lg leading-relaxed flex-grow">
               {{ feature.description }}
             </p>
           </div>
