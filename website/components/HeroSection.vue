@@ -18,10 +18,10 @@
           <h1 class="text-4xl md:text-6xl lg:text-7xl xl:text-8xl text-white mb-4 tracking-tight bg-gradient-to-r from-[#7C3AED] via-[#06B6D4] to-[#7C3AED] bg-clip-text text-transparent">
             klangbild
           </h1>
-          <p class="text-lg md:text-2xl lg:text-3xl text-gray-400 max-w-2xl mx-auto font-light">
+          <p class="text-lg md:text-2xl lg:text-3xl text-gray-400 max-w-2xl mx-auto">
             Generate stunning 4K audio visualizer videos for YouTube
           </p>
-          <p class="text-sm md:text-base text-gray-500 mt-2 font-light">
+          <p class="text-sm md:text-base text-gray-500 mt-2">
             Linux-only command-line tool
           </p>
         </div>
@@ -61,7 +61,7 @@
               </div>
               
               <div class="absolute bottom-6 left-0 right-0 text-center">
-                <span class="text-gray-500 text-sm font-light">Click to watch demo</span>
+                <span class="text-gray-500 text-sm">Click to watch demo</span>
               </div>
             </div>
           </div>
@@ -70,7 +70,7 @@
         <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mt-4 animate-fade-in">
           <NuxtLink
             to="#features"
-            class="group flex items-center gap-2 text-[#7C3AED] hover:text-[#06B6D4] transition-colors font-light"
+            class="group flex items-center gap-2 text-[#7C3AED] hover:text-[#06B6D4] transition-colors"
           >
             <span>Get Started</span>
             <UIcon name="ph:arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -83,7 +83,7 @@
             target="_blank"
           >
             <UIcon name="ph:star-fill" class="w-4 h-4 text-yellow-500" />
-            <span class="text-gray-300 font-light">Star on GitHub</span>
+            <span class="text-gray-300">Star on GitHub</span>
           </NuxtLink>
         </div>
         
@@ -92,7 +92,7 @@
             to="#features"
             class="group flex flex-col items-center gap-1 text-gray-500 hover:text-[#7C3AED] transition-colors cursor-pointer"
           >
-            <span class="text-xs font-light mb-1 opacity-0 group-hover:opacity-100 transition-opacity">Scroll down</span>
+            <span class="text-xs mb-1 opacity-0 group-hover:opacity-100 transition-opacity">Scroll down</span>
             <div class="animate-bounce">
               <UIcon name="ph:caret-down" class="w-6 h-6" />
             </div>

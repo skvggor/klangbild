@@ -2,10 +2,10 @@
   <section id="examples" class="py-24 bg-[#0f0f1a]">
     <div class="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12">
       <div class="section-header mb-16">
-        <h2 class="text-3xl md:text-4xl lg:text-5xl font-light text-white mb-4 tracking-tight">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl text-white mb-4 tracking-tight">
           {{ examples?.title || 'Examples' }}
         </h2>
-        <p class="text-lg md:text-xl lg:text-2xl text-gray-400 font-light">
+        <p class="text-lg md:text-xl lg:text-2xl text-gray-400">
           {{ examples?.description || 'See what you can create with klangbild' }}
         </p>
       </div>
@@ -20,7 +20,7 @@
             <h3 class="text-lg md:text-xl lg:text-2xl font-normal text-white mb-1 h-8 flex items-center">
               {{ layout.name }}
             </h3>
-            <p class="text-gray-400 text-sm md:text-base lg:text-lg font-light min-h-[3rem] leading-relaxed">
+            <p class="text-gray-400 text-sm md:text-base lg:text-lg min-h-[3rem] leading-relaxed">
               {{ layout.description }}
             </p>
           </div>

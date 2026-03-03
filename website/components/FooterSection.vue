@@ -5,9 +5,9 @@
         <div>
           <div class="flex items-center gap-3 mb-2">
             <img src="/icon.svg" alt="klangbild" class="w-6 h-6 opacity-80" />
-            <span class="text-lg md:text-xl lg:text-2xl font-light text-white tracking-tight">klangbild</span>
+            <span class="text-lg md:text-xl lg:text-2xl text-white tracking-tight">klangbild</span>
           </div>
-          <p class="text-gray-500 text-xs md:text-sm lg:text-base font-light">
+          <p class="text-gray-500 text-xs md:text-sm lg:text-base">
             4K audio visualizer for YouTube
           </p>
         </div>
@@ -17,7 +17,7 @@
             v-for="link in footer?.links"
             :key="link.name"
             :to="link.url"
-            class="text-gray-400 hover:text-[#7C3AED] transition-colors text-sm md:text-base lg:text-lg font-light"
+            class="text-gray-400 hover:text-[#7C3AED] transition-colors text-sm md:text-base lg:text-lg"
             :external="link.url.startsWith('http')"
             :target="link.url.startsWith('http') ? '_blank' : undefined"
           >
@@ -25,7 +25,7 @@
           </NuxtLink>
         </div>
         
-        <div class="text-gray-500 text-xs md:text-sm lg:text-base font-light">
+        <div class="text-gray-500 text-xs md:text-sm lg:text-base">
           by 
           <NuxtLink 
             :to="footer?.authorUrl || 'https://skvggor.dev'" 

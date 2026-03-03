@@ -2,10 +2,10 @@
   <section id="quickstart" class="py-24 bg-[#0a0a0f]">
     <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
       <div class="mb-16">
-        <h2 class="text-3xl md:text-4xl lg:text-5xl font-light text-white mb-4 tracking-tight">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl text-white mb-4 tracking-tight">
           Quick Start
         </h2>
-        <p class="text-lg md:text-xl lg:text-2xl text-gray-400 font-light">
+        <p class="text-lg md:text-xl lg:text-2xl text-gray-400">
           Get started in seconds with these simple commands
         </p>
       </div>
@@ -13,7 +13,7 @@
       <div class="flex flex-col gap-16">
         <div class="code-block">
           <div class="flex items-center justify-between mb-4">
-            <span class="text-sm md:text-base lg:text-lg text-gray-500 font-light">Basic Usage</span>
+            <span class="text-sm md:text-base lg:text-lg text-gray-500">Basic Usage</span>
             <button
               class="text-xs text-[#7C3AED] hover:text-[#06B6D4] transition-colors flex items-center gap-1"
               @click="copyToClipboard(basicCommandRaw, 'basic')"
@@ -35,7 +35,7 @@
         
         <div class="code-block">
           <div class="flex items-center justify-between mb-4">
-            <span class="text-sm md:text-base lg:text-lg text-gray-500 font-light">With Gradients</span>
+            <span class="text-sm md:text-base lg:text-lg text-gray-500">With Gradients</span>
             <button
               class="text-xs text-[#7C3AED] hover:text-[#06B6D4] transition-colors flex items-center gap-1"
               @click="copyToClipboard(gradientCommandRaw, 'gradient')"
@@ -58,7 +58,7 @@
         
         <div class="code-block">
           <div class="flex items-center justify-between mb-4">
-            <span class="text-sm md:text-base lg:text-lg text-gray-500 font-light">Batch Mode</span>
+            <span class="text-sm md:text-base lg:text-lg text-gray-500">Batch Mode</span>
             <button
               class="text-xs text-[#7C3AED] hover:text-[#06B6D4] transition-colors flex items-center gap-1"
               @click="copyToClipboard(batchCommandRaw, 'batch')"
