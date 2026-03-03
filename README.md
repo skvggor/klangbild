@@ -9,21 +9,40 @@ A **Linux-only command-line tool** written in Python.
 
 ---
 
+<img height="50" src="assets/star.svg" alt="klangbild preview" />
+
+---
+
 ## Table of Contents
 
-1. [Features](#features)
-2. [Examples](#examples)
-3. [Requirements](#requirements)
-4. [Installation](#installation)
-5. [Usage](#usage)
-6. [Options](#options)
-7. [Resources](#resources)
-   - [Layouts](#layouts)
-   - [Wave Styles](#wave-styles)
-   - [Gradients](#gradients)
-   - [Film Grain](#film-grain)
- 8. [Output](#output)
- 9. [License](#license)
+- [Table of Contents](#table-of-contents)
+- [Features](#features)
+- [Examples](#examples)
+  - [Covers](#covers)
+  - [Layouts](#layouts)
+  - [Film Grain](#film-grain)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Development](#development)
+  - [Git Hooks](#git-hooks)
+  - [CI](#ci)
+- [License](#license)
+- [Usage](#usage)
+  - [Basic](#basic)
+  - [With Custom Font](#with-custom-font)
+  - [With Gradients](#with-gradients)
+  - [With Film Grain](#with-film-grain)
+  - [With Portuguese Language](#with-portuguese-language)
+  - [Full Example](#full-example)
+  - [Batch Mode](#batch-mode)
+- [Options](#options)
+- [Resources](#resources)
+  - [Layouts](#layouts-1)
+  - [Wave Styles](#wave-styles)
+  - [Gradients](#gradients)
+  - [Film Grain](#film-grain-1)
+- [Output](#output)
+- [License](#license-1)
 
 ---
 
