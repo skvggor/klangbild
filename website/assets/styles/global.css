@@ -57,14 +57,24 @@ pre {
 
 html {
   scroll-behavior: smooth;
+  background-color: rgb(10 10 15 / var(--tw-bg-opacity, 1));
 }
 
-::selection {
-  background-color: rgba(124, 58, 237, 0.3);
-  color: white;
+*::selection {
+  background-color: rgba(124, 58, 237, 0.4) !important;
+  color: #ffffff !important;
 }
 
-::-moz-selection {
-  background-color: rgba(124, 58, 237, 0.3);
-  color: white;
+*::-moz-selection {
+  background-color: rgba(124, 58, 237, 0.4) !important;
+  color: #ffffff !important;
+}
+
+#app-content {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+
+#app-content.is-ready {
+  opacity: 1;
 }
