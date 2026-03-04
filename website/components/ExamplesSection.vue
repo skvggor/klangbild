@@ -5,9 +5,10 @@
         <h2 class="text-3xl md:text-4xl lg:text-5xl text-white mb-4 tracking-tight">
           {{ examples?.title || 'Examples' }}
         </h2>
-        <p class="text-lg md:text-xl lg:text-2xl text-gray-400">
-          {{ examples?.description || 'See what you can create with klangbild' }}
-        </p>
+        <p
+          class="text-lg md:text-xl lg:text-2xl text-gray-400"
+          v-html="highlight(examples?.description || 'See what you can create with klangbild')"
+        ></p>
       </div>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-8 lg:gap-10">
@@ -39,6 +40,8 @@
 </template>
 
 <script setup lang="ts">
+const { highlight } = useGradientBrand();
+
 const { data: examples } = await useAsyncData("examples", () =>
   queryContent("examples").findOne(),
 );

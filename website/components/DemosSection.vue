@@ -5,9 +5,10 @@
         <h2 class="text-3xl md:text-4xl lg:text-5xl text-white mb-4 tracking-tight">
           {{ demos?.title || 'Demos' }}
         </h2>
-        <p class="text-lg md:text-xl lg:text-2xl text-gray-400 max-w-2xl">
-          {{ demos?.description || 'See what klangbild can do.' }}
-        </p>
+        <p
+          class="text-lg md:text-xl lg:text-2xl text-gray-400 max-w-2xl"
+          v-html="highlight(demos?.description || 'See what klangbild can do.')"
+        ></p>
       </div>
 
       <div v-if="demos?.link" class="demo-item">
@@ -38,6 +39,8 @@
 </template>
 
 <script setup lang="ts">
+const { highlight } = useGradientBrand();
+
 const { data: demos } = await useAsyncData("demos", () =>
   queryContent("demos").findOne(),
 );
