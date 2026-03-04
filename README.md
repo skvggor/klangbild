@@ -26,7 +26,6 @@ A **Linux-only command-line tool** written in Python.
 - [Development](#development)
   - [Git Hooks](#git-hooks)
   - [CI](#ci)
-- [License](#license)
 - [Usage](#usage)
   - [Basic](#basic)
   - [With Custom Font](#with-custom-font)
@@ -42,7 +41,7 @@ A **Linux-only command-line tool** written in Python.
   - [Gradients](#gradients)
   - [Film Grain](#film-grain-1)
 - [Output](#output)
-- [License](#license-1)
+- [License](#license)
 
 ---
 
@@ -133,8 +132,6 @@ uv run pre-commit run --all-files
 Tests run automatically on PRs to `main` via GitHub Actions.
 
 ---
-
-## License
 
 ## Usage
 
