@@ -55,9 +55,11 @@ onMounted(() => {
     { threshold: 0.1, rootMargin: "0px 0px -50px 0px" },
   );
 
-  document.querySelectorAll(".section-header-demos, .demo-item").forEach((el) => {
-    observer.observe(el);
-  });
+  document
+    .querySelectorAll(".section-header-demos, .demo-item")
+    .forEach((el) => {
+      observer.observe(el);
+    });
 });
 </script>
 

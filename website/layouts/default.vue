@@ -1,9 +1,10 @@
 <template>
   <div>
-    <slot />
+    <ClientOnly>
+      <PreloaderOverlay />
+    </ClientOnly>
+    <div id="app-content">
+      <slot />
+    </div>
   </div>
 </template>
-
-<script setup lang="ts">
-// Minimal layout - all styling is component-scoped
-</script>
