@@ -1,6 +1,7 @@
 <template>
   <div class="min-h-screen bg-[#0a0a0f] pb-32">
     <HeroSection />
+    <DemosSection />
     <FeaturesSection />
     <ExamplesSection />
     <QuickStartSection />
