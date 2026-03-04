@@ -13,8 +13,15 @@ A **Linux-only command-line tool** written in Python.
 
 ---
 
+## Demos
+
+[Watch on YouTube](https://www.youtube.com/watch?v=zSJnd_S_jVk&list=PLHu9uHPNFQRA6BXrLtX8D1RPYmmZm1wZ4)
+
+---
+
 ## Table of Contents
 
+- [Demos](#demos)
 - [Table of Contents](#table-of-contents)
 - [Features](#features)
 - [Examples](#examples)
