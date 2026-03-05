@@ -9,9 +9,9 @@
       <div class="flex flex-col items-center justify-center w-full max-w-4xl mx-auto text-center">
         <div class="mb-6 animate-fade-in-down">
           <div class="mb-6">
-            <img 
-              src="/icon.svg" 
-              alt="klangbild" 
+            <img
+              src="/icon.svg"
+              alt="klangbild"
               class="w-16 h-16 md:w-20 md:h-20 mx-auto"
             />
           </div>
@@ -25,7 +25,7 @@
             Linux-only command-line tool
           </p>
         </div>
-        
+
         <div class="w-full max-w-3xl mx-auto mb-10 animate-fade-in-up">
           <div
             class="relative w-full bg-transparent rounded-lg overflow-hidden border border-[#7C3AED]/20 shadow-2xl shadow-[#7C3AED]/10"
@@ -40,7 +40,7 @@
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowfullscreen
             ></iframe>
-            
+
             <div
               v-show="!isPlaying"
               class="absolute inset-0 flex items-center justify-center bg-[#0a0a0f]/30 backdrop-blur-xl cursor-pointer group"
@@ -55,18 +55,18 @@
                   <div class="absolute w-2 h-2 rounded-full bg-[#7C3AED]/15 animate-pulse" style="top: 15%; left: 70%; animation-delay: 2s;"></div>
                 </div>
               </div>
-              
+
               <div class="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#06B6D4] flex items-center justify-center opacity-90 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110 shadow-xl shadow-[#7C3AED]/40">
                 <UIcon name="ph:play-fill" class="w-8 h-8 md:w-10 md:h-10 text-white ml-1" />
               </div>
-              
+
               <div class="absolute bottom-6 left-0 right-0 text-center">
                 <span class="text-gray-500 text-sm">Click to watch demo</span>
               </div>
             </div>
           </div>
         </div>
-        
+
         <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mt-4 animate-fade-in">
           <NuxtLink
             to="#features"
@@ -86,7 +86,7 @@
             <span class="text-gray-300">Star on GitHub</span>
           </NuxtLink>
         </div>
-        
+
         <div class="flex justify-center mt-10 animate-fade-in">
           <NuxtLink
             to="#features"
@@ -105,7 +105,7 @@
 
 <script setup lang="ts">
 const isPlaying = ref(false);
-const videoId = "zSJnd_S_jVk";
+const videoId = "u7wrlAESO_M";
 
 const videoUrl = computed(() => {
   return `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&rel=0&showinfo=0`;
