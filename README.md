@@ -19,39 +19,6 @@ A **Linux-only command-line tool** written in Python.
 
 ---
 
-## Table of Contents
-
-- [Demos](#demos)
-- [Table of Contents](#table-of-contents)
-- [Features](#features)
-- [Examples](#examples)
-  - [Covers](#covers)
-  - [Layouts](#layouts)
-  - [Film Grain](#film-grain)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Development](#development)
-  - [Git Hooks](#git-hooks)
-  - [CI](#ci)
-- [Usage](#usage)
-  - [Basic](#basic)
-  - [With Custom Font](#with-custom-font)
-  - [With Gradients](#with-gradients)
-  - [With Film Grain](#with-film-grain)
-  - [With Portuguese Language](#with-portuguese-language)
-  - [Full Example](#full-example)
-  - [Batch Mode](#batch-mode)
-- [Options](#options)
-- [Resources](#resources)
-  - [Layouts](#layouts-1)
-  - [Wave Styles](#wave-styles)
-  - [Gradients](#gradients)
-  - [Film Grain](#film-grain-1)
-- [Output](#output)
-- [License](#license)
-
----
-
 ## Features
 
 - Multiple layout options: classic, spotlight, split-left, split-right
